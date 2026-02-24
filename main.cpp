@@ -1828,6 +1828,569 @@ void eliminarCliente(Tienda* tienda) {
     cout << "Cliente con ID " << id << " eliminado exitosamente.\n";
 }
 
+void registrarCompra(Tienda* tienda) {
+    if (tienda->numProveedores == 0) {
+        cout << "Error: No hay proveedores registrados. Debe crear un proveedor primero.\n";
+        return;
+    }
+    if (tienda->numProductos == 0) {
+        cout << "Error: No hay productos registrados. Debe crear un producto primero.\n";
+        return;
+    }
+    
+    cout << "\n=== REGISTRAR COMPRA A PROVEEDOR ===\n";
+    
+    Transaccion nuevaCompra;
+    strcpy(nuevaCompra.tipo, "COMPRA");
+    
+    listarProveedores(tienda);
+    cout << "\n";
+    
+    if (!validarInt("Ingrese ID del proveedor (o 'cancelar' para cancelar): ", nuevaCompra.idRelacionado)) {
+        return;
+    }
+    
+    int indiceProveedor = buscarIndiceProveedorPorId(tienda, nuevaCompra.idRelacionado);
+    if (indiceProveedor == -1) {
+        cout << "Error: Proveedor con ID " << nuevaCompra.idRelacionado << " no existe.\n";
+        return;
+    }
+    
+    listarProductos(tienda);
+    cout << "\n";
+    
+    if (!validarInt("Ingrese ID del producto (o 'cancelar' para cancelar): ", nuevaCompra.idProducto)) {
+        return;
+    }
+    
+    int indiceProducto = buscarIndiceProductoPorId(tienda, nuevaCompra.idProducto);
+    if (indiceProducto == -1) {
+        cout << "Error: Producto con ID " << nuevaCompra.idProducto << " no existe.\n";
+        return;
+    }
+    
+    if (!validarInt("Ingrese cantidad a comprar (o 'cancelar' para cancelar): ", nuevaCompra.cantidad)) {
+        return;
+    }
+    if (nuevaCompra.cantidad <= 0) {
+        cout << "Error: La cantidad debe ser mayor a 0.\n";
+        return;
+    }
+    
+    if (!validarFloat("Ingrese precio unitario de compra (o 'cancelar' para cancelar): ", nuevaCompra.precioUnitario)) {
+        return;
+    }
+    if (nuevaCompra.precioUnitario <= 0) {
+        cout << "Error: El precio debe ser mayor a 0.\n";
+        return;
+    }
+    
+    nuevaCompra.total = nuevaCompra.cantidad * nuevaCompra.precioUnitario;
+    tomarFechaActual(nuevaCompra.fecha, sizeof(nuevaCompra.fecha));
+    
+    cout << "Ingrese descripci�n de la compra (opcional, Enter para omitir): ";
+    cin.getline(nuevaCompra.descripcion, 200);
+    
+    cout << "\n-----------------------------\n";
+    cout << "RESUMEN DE COMPRA:\n";
+    cout << "Proveedor: " << tienda->proveedores[indiceProveedor].nombre << " (ID: " << nuevaCompra.idRelacionado << ")\n";
+    cout << "Producto: " << tienda->productos[indiceProducto].nombre << " (ID: " << nuevaCompra.idProducto << ")\n";
+    cout << "Cantidad: " << nuevaCompra.cantidad << "\n";
+    cout << "Precio Unitario: $" << nuevaCompra.precioUnitario << "\n";
+    cout << "Total: $" << nuevaCompra.total << "\n";
+    cout << "Fecha: " << nuevaCompra.fecha << "\n";
+    cout << "-----------------------------\n";
+    
+    cout << "\n�Confirmar compra? (s/n): ";
+    char confirmacion[10];
+    cin.getline(confirmacion, 10);
+    
+    if (tolower(confirmacion[0]) != 's') {
+        cout << "Compra cancelada.\n";
+        return;
+    }
+    
+    nuevaCompra.id = tienda->siguienteIdTransaccion;
+    
+    if (tienda->numTransacciones >= tienda->capacidadTransacciones) {
+        redimensionarArrayTransacciones(tienda);
+    }
+    
+    tienda->transacciones[tienda->numTransacciones] = nuevaCompra;
+    tienda->numTransacciones++;
+    tienda->siguienteIdTransaccion++;
+    
+    tienda->productos[indiceProducto].stock += nuevaCompra.cantidad;
+    
+    cout << "Compra registrada exitosamente con ID: " << nuevaCompra.id << endl;
+    cout << "Stock actualizado. Nuevo stock de " << tienda->productos[indiceProducto].nombre 
+         << ": " << tienda->productos[indiceProducto].stock << endl;
+}
+
+void registrarVenta(Tienda* tienda) {
+    if (tienda->numClientes == 0) {
+        cout << "Error: No hay clientes registrados. Debe crear un cliente primero.\n";
+        return;
+    }
+    if (tienda->numProductos == 0) {
+        cout << "Error: No hay productos registrados. Debe crear un producto primero.\n";
+        return;
+    }
+    
+    cout << "\n=== REGISTRAR VENTA A CLIENTE ===\n";
+    
+    Transaccion nuevaVenta;
+    strcpy(nuevaVenta.tipo, "VENTA");
+    
+    listarClientes(tienda);
+    cout << "\n";
+    
+    if (!validarInt("Ingrese ID del cliente (o 'cancelar' para cancelar): ", nuevaVenta.idRelacionado)) {
+        return;
+    }
+    
+    int indiceCliente = buscarIndiceClientePorId(tienda, nuevaVenta.idRelacionado);
+    if (indiceCliente == -1) {
+        cout << "Error: Cliente con ID " << nuevaVenta.idRelacionado << " no existe.\n";
+        return;
+    }
+    
+    listarProductos(tienda);
+    cout << "\n";
+    
+    if (!validarInt("Ingrese ID del producto (o 'cancelar' para cancelar): ", nuevaVenta.idProducto)) {
+        return;
+    }
+    
+    int indiceProducto = buscarIndiceProductoPorId(tienda, nuevaVenta.idProducto);
+    if (indiceProducto == -1) {
+        cout << "Error: Producto con ID " << nuevaVenta.idProducto << " no existe.\n";
+        return;
+    }
+    
+    cout << "Stock disponible: " << tienda->productos[indiceProducto].stock << endl;
+    
+    if (!validarInt("Ingrese cantidad a vender (o 'cancelar' para cancelar): ", nuevaVenta.cantidad)) {
+        return;
+    }
+    if (nuevaVenta.cantidad <= 0) {
+        cout << "Error: La cantidad debe ser mayor a 0.\n";
+        return;
+    }
+    
+    if (nuevaVenta.cantidad > tienda->productos[indiceProducto].stock) {
+        cout << "ERROR: Stock insuficiente. Disponible: " << tienda->productos[indiceProducto].stock 
+             << ", Solicitado: " << nuevaVenta.cantidad << endl;
+        return;
+    }
+    
+    cout << "Precio del producto: $" << tienda->productos[indiceProducto].precio << endl;
+    cout << "�Desea usar el precio del producto? (s/n): ";
+    char usarPrecio[10];
+    cin.getline(usarPrecio, 10);
+    
+    if (tolower(usarPrecio[0]) == 's') {
+        nuevaVenta.precioUnitario = tienda->productos[indiceProducto].precio;
+    } else {
+        if (!validarFloat("Ingrese precio unitario de venta (o 'cancelar' para cancelar): ", nuevaVenta.precioUnitario)) {
+            return;
+        }
+        if (nuevaVenta.precioUnitario <= 0) {
+            cout << "Error: El precio debe ser mayor a 0.\n";
+            return;
+        }
+    }
+    
+    nuevaVenta.total = nuevaVenta.cantidad * nuevaVenta.precioUnitario;
+    tomarFechaActual(nuevaVenta.fecha, sizeof(nuevaVenta.fecha));
+    
+    cout << "Ingrese descripci�n de la venta (opcional, Enter para omitir): ";
+    cin.getline(nuevaVenta.descripcion, 200);
+    
+    cout << "\n-----------------------------\n";
+    cout << "RESUMEN DE VENTA:\n";
+    cout << "Cliente: " << tienda->clientes[indiceCliente].nombre << " (ID: " << nuevaVenta.idRelacionado << ")\n";
+    cout << "Producto: " << tienda->productos[indiceProducto].nombre << " (ID: " << nuevaVenta.idProducto << ")\n";
+    cout << "Cantidad: " << nuevaVenta.cantidad << "\n";
+    cout << "Precio Unitario: $" << nuevaVenta.precioUnitario << "\n";
+    cout << "Total: $" << nuevaVenta.total << "\n";
+    cout << "Fecha: " << nuevaVenta.fecha << "\n";
+    cout << "-----------------------------\n";
+    
+    cout << "\n�Confirmar venta? (s/n): ";
+    char confirmacion[10];
+    cin.getline(confirmacion, 10);
+    
+    if (tolower(confirmacion[0]) != 's') {
+        cout << "Venta cancelada.\n";
+        return;
+    }
+    
+    nuevaVenta.id = tienda->siguienteIdTransaccion;
+    
+    if (tienda->numTransacciones >= tienda->capacidadTransacciones) {
+        redimensionarArrayTransacciones(tienda);
+    }
+    
+    tienda->transacciones[tienda->numTransacciones] = nuevaVenta;
+    tienda->numTransacciones++;
+    tienda->siguienteIdTransaccion++;
+    
+    tienda->productos[indiceProducto].stock -= nuevaVenta.cantidad;
+    
+    cout << "Venta registrada exitosamente con ID: " << nuevaVenta.id << endl;
+    cout << "Stock actualizado. Nuevo stock de " << tienda->productos[indiceProducto].nombre 
+         << ": " << tienda->productos[indiceProducto].stock << endl;
+}
+
+void cancelarTransaccion(Tienda* tienda) {
+    if (tienda->numTransacciones == 0) {
+        cout << "No hay transacciones para cancelar.\n";
+        return;
+    }
+    
+    int id;
+    if (!validarInt("Ingrese ID de la transacci�n a cancelar (o 'cancelar' para volver): ", id)) {
+        return;
+    }
+    
+    int indice = buscarIndiceTransaccionPorId(tienda, id);
+    if (indice == -1) {
+        cout << "Transacci�n con ID " << id << " no encontrada.\n";
+        return;
+    }
+    
+    Transaccion& t = tienda->transacciones[indice];
+    
+    cout << "\n=== DETALLE DE TRANSACCI�N A CANCELAR ===\n";
+    cout << "ID: " << t.id << endl;
+    cout << "Tipo: " << t.tipo << endl;
+    
+    int idxProducto = buscarIndiceProductoPorId(tienda, t.idProducto);
+    if (idxProducto != -1) {
+        cout << "Producto: " << tienda->productos[idxProducto].nombre << " (ID: " << t.idProducto << ")" << endl;
+        cout << "Stock actual del producto: " << tienda->productos[idxProducto].stock << endl;
+    }
+    
+    if (strcmp(t.tipo, "COMPRA") == 0) {
+        int idxProv = buscarIndiceProveedorPorId(tienda, t.idRelacionado);
+        if (idxProv != -1) {
+            cout << "Proveedor: " << tienda->proveedores[idxProv].nombre << " (ID: " << t.idRelacionado << ")" << endl;
+        }
+        cout << "Cantidad comprada: " << t.cantidad << endl;
+        cout << "ADVERTENCIA: Al cancelar esta compra, se RESTAR�N " << t.cantidad 
+             << " unidades del stock.\n";
+    } else {
+        int idxCli = buscarIndiceClientePorId(tienda, t.idRelacionado);
+        if (idxCli != -1) {
+            cout << "Cliente: " << tienda->clientes[idxCli].nombre << " (ID: " << t.idRelacionado << ")" << endl;
+        }
+        cout << "Cantidad vendida: " << t.cantidad << endl;
+        cout << "ADVERTENCIA: Al cancelar esta venta, se SUMAR�N " << t.cantidad 
+             << " unidades al stock.\n";
+    }
+    
+    cout << "Total: $" << t.total << endl;
+    cout << "Fecha: " << t.fecha << endl;
+    
+    cout << "\n�Est� seguro que desea CANCELAR esta transacci�n? (s/n): ";
+    char confirmacion[10];
+    cin.getline(confirmacion, 10);
+    
+    if (tolower(confirmacion[0]) != 's') {
+        cout << "Cancelaci�n abortada.\n";
+        return;
+    }
+    
+    if (idxProducto != -1) {
+        if (strcmp(t.tipo, "COMPRA") == 0) {
+            tienda->productos[idxProducto].stock -= t.cantidad;
+            if (tienda->productos[idxProducto].stock < 0) {
+                tienda->productos[idxProducto].stock = 0;
+            }
+            cout << "Stock actualizado. Se restaron " << t.cantidad << " unidades. Nuevo stock: " 
+                 << tienda->productos[idxProducto].stock << endl;
+        } else {
+            tienda->productos[idxProducto].stock += t.cantidad;
+            cout << "Stock actualizado. Se sumaron " << t.cantidad << " unidades. Nuevo stock: " 
+                 << tienda->productos[idxProducto].stock << endl;
+        }
+    }
+    
+    for (int i = indice; i < tienda->numTransacciones - 1; i++) {
+        tienda->transacciones[i] = tienda->transacciones[i + 1];
+    }
+    tienda->numTransacciones--;
+    
+    cout << "Transacci�n con ID " << id << " cancelada exitosamente.\n";
+}
+
+void buscarTransaccionPorId(Tienda* tienda, int id) {
+    int indice = buscarIndiceTransaccionPorId(tienda, id);
+    if (indice != -1) {
+        Transaccion& t = tienda->transacciones[indice];
+        cout << "\n=== TRANSACCI�N ENCONTRADA ===\n";
+        cout << "ID: " << t.id << endl;
+        cout << "Tipo: " << t.tipo << endl;
+        cout << "ID Producto: " << t.idProducto << endl;
+        cout << "ID Relacionado: " << t.idRelacionado << " (";
+        if (strcmp(t.tipo, "COMPRA") == 0) {
+            int idx = buscarIndiceProveedorPorId(tienda, t.idRelacionado);
+            if (idx != -1) cout << tienda->proveedores[idx].nombre;
+        } else {
+            int idx = buscarIndiceClientePorId(tienda, t.idRelacionado);
+            if (idx != -1) cout << tienda->clientes[idx].nombre;
+        }
+        cout << ")" << endl;
+        cout << "Cantidad: " << t.cantidad << endl;
+        cout << "Precio Unitario: $" << t.precioUnitario << endl;
+        cout << "Total: $" << t.total << endl;
+        cout << "Fecha: " << t.fecha << endl;
+        cout << "Descripci�n: " << t.descripcion << endl;
+    } else {
+        cout << "Transacci�n con ID " << id << " no encontrada.\n";
+    }
+}
+
+void buscarTransaccionPorProducto(Tienda* tienda, int idProducto) {
+    int encontrados = 0;
+    cout << "\n=== TRANSACCIONES DEL PRODUCTO ID: " << idProducto << " ===\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        if (tienda->transacciones[i].idProducto == idProducto) {
+            Transaccion& t = tienda->transacciones[i];
+            cout << "ID: " << t.id << ", Tipo: " << t.tipo 
+                 << ", Cantidad: " << t.cantidad << ", Total: $" << t.total 
+                 << ", Fecha: " << t.fecha << endl;
+            encontrados++;
+        }
+    }
+    
+    if (encontrados == 0) {
+        cout << "No se encontraron transacciones para el producto con ID " << idProducto << ".\n";
+    } else {
+        cout << "Total de transacciones encontradas: " << encontrados << endl;
+    }
+}
+
+void buscarTransaccionPorCliente(Tienda* tienda, int idCliente) {
+    int encontrados = 0;
+    cout << "\n=== TRANSACCIONES DEL CLIENTE ID: " << idCliente << " ===\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        if (strcmp(tienda->transacciones[i].tipo, "VENTA") == 0 && 
+            tienda->transacciones[i].idRelacionado == idCliente) {
+            Transaccion& t = tienda->transacciones[i];
+            cout << "ID: " << t.id << ", Producto ID: " << t.idProducto 
+                 << ", Cantidad: " << t.cantidad << ", Total: $" << t.total 
+                 << ", Fecha: " << t.fecha << endl;
+            encontrados++;
+        }
+    }
+    
+    if (encontrados == 0) {
+        cout << "No se encontraron ventas para el cliente con ID " << idCliente << ".\n";
+    } else {
+        cout << "Total de ventas encontradas: " << encontrados << endl;
+    }
+}
+
+void buscarTransaccionPorProveedor(Tienda* tienda, int idProveedor) {
+    int encontrados = 0;
+    cout << "\n=== TRANSACCIONES DEL PROVEEDOR ID: " << idProveedor << " ===\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        if (strcmp(tienda->transacciones[i].tipo, "COMPRA") == 0 && 
+            tienda->transacciones[i].idRelacionado == idProveedor) {
+            Transaccion& t = tienda->transacciones[i];
+            cout << "ID: " << t.id << ", Producto ID: " << t.idProducto 
+                 << ", Cantidad: " << t.cantidad << ", Total: $" << t.total 
+                 << ", Fecha: " << t.fecha << endl;
+            encontrados++;
+        }
+    }
+    
+    if (encontrados == 0) {
+        cout << "No se encontraron compras para el proveedor con ID " << idProveedor << ".\n";
+    } else {
+        cout << "Total de compras encontradas: " << encontrados << endl;
+    }
+}
+
+void buscarTransaccionPorFecha(Tienda* tienda, const char* fecha) {
+    int encontrados = 0;
+    cout << "\n=== TRANSACCIONES DE LA FECHA: " << fecha << " ===\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        if (strcmp(tienda->transacciones[i].fecha, fecha) == 0) {
+            Transaccion& t = tienda->transacciones[i];
+            cout << "ID: " << t.id << ", Tipo: " << t.tipo 
+                 << ", Producto ID: " << t.idProducto << ", Cantidad: " << t.cantidad 
+                 << ", Total: $" << t.total << endl;
+            encontrados++;
+        }
+    }
+    
+    if (encontrados == 0) {
+        cout << "No se encontraron transacciones para la fecha " << fecha << ".\n";
+    } else {
+        cout << "Total de transacciones encontradas: " << encontrados << endl;
+    }
+}
+
+void buscarTransaccionPorTipo(Tienda* tienda, const char* tipo) {
+    int encontrados = 0;
+    cout << "\n=== TRANSACCIONES DE TIPO: " << tipo << " ===\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        if (strcmp(tienda->transacciones[i].tipo, tipo) == 0) {
+            Transaccion& t = tienda->transacciones[i];
+            cout << "ID: " << t.id << ", Producto ID: " << t.idProducto 
+                 << ", Cantidad: " << t.cantidad << ", Total: $" << t.total 
+                 << ", Fecha: " << t.fecha << endl;
+            encontrados++;
+        }
+    }
+    
+    if (encontrados == 0) {
+        cout << "No se encontraron transacciones de tipo " << tipo << ".\n";
+    } else {
+        cout << "Total de transacciones encontradas: " << encontrados << endl;
+    }
+}
+
+void menuBuscarTransaccion(Tienda* tienda) {
+    if (tienda->numTransacciones == 0) {
+        cout << "No hay transacciones registradas para buscar.\n";
+        return;
+    }
+    
+    int opcion;
+    do {
+        cout << "\n=== BUSCAR TRANSACCIONES ===\n";
+        cout << "1. Buscar por ID de transacci�n\n";
+        cout << "2. Buscar por ID de producto\n";
+        cout << "3. Buscar por ID de cliente\n";
+        cout << "4. Buscar por ID de proveedor\n";
+        cout << "5. Buscar por fecha exacta (YYYY-MM-DD)\n";
+        cout << "6. Buscar por tipo (COMPRA/VENTA)\n";
+        cout << "0. Volver\n";
+        cout << "Seleccione una opci�n: ";
+        cin >> opcion;
+        cin.ignore(10000, '\n');
+        
+        switch(opcion) {
+            case 1: {
+                int id;
+                if (!validarInt("Ingrese ID de transacci�n (o 'cancelar' para cancelar): ", id)) {
+                    break;
+                }
+                buscarTransaccionPorId(tienda, id);
+                break;
+            }
+            case 2: {
+                int id;
+                if (!validarInt("Ingrese ID de producto (o 'cancelar' para cancelar): ", id)) {
+                    break;
+                }
+                buscarTransaccionPorProducto(tienda, id);
+                break;
+            }
+            case 3: {
+                int id;
+                if (!validarInt("Ingrese ID de cliente (o 'cancelar' para cancelar): ", id)) {
+                    break;
+                }
+                buscarTransaccionPorCliente(tienda, id);
+                break;
+            }
+            case 4: {
+                int id;
+                if (!validarInt("Ingrese ID de proveedor (o 'cancelar' para cancelar): ", id)) {
+                    break;
+                }
+                buscarTransaccionPorProveedor(tienda, id);
+                break;
+            }
+            case 5: {
+                char fecha[11];
+                cout << "Ingrese fecha (YYYY-MM-DD) o 'cancelar' para cancelar: ";
+                cin.getline(fecha, 11);
+                
+                if (strcmp(fecha, "cancelar") == 0) {
+                    cout << "B�squeda cancelada.\n";
+                    break;
+                }
+                
+                if (validarFecha(fecha)) {
+                    buscarTransaccionPorFecha(tienda, fecha);
+                }
+                break;
+            }
+            case 6: {
+                char tipo[10];
+                cout << "Ingrese tipo (COMPRA/VENTA) o 'cancelar' para cancelar: ";
+                cin.getline(tipo, 10);
+                
+                if (strcmp(tipo, "cancelar") == 0) {
+                    cout << "B�squeda cancelada.\n";
+                    break;
+                }
+                
+                if (strcmp(tipo, "COMPRA") == 0 || strcmp(tipo, "VENTA") == 0) {
+                    buscarTransaccionPorTipo(tienda, tipo);
+                } else {
+                    cout << "Tipo inv�lido. Debe ser COMPRA o VENTA.\n";
+                }
+                break;
+            }
+            case 0:
+                cout << "Volviendo...\n";
+                break;
+            default:
+                cout << "Opci�n no v�lida.\n";
+        }
+        
+        if (opcion != 0) {
+            cout << "\nPresione Enter para continuar...";
+            cin.get();
+        }
+        
+    } while(opcion != 0);
+}
+
+void menuListarTransacciones(Tienda* tienda) {
+    if (tienda->numTransacciones == 0) {
+        cout << "No hay transacciones registradas.\n";
+        return;
+    }
+    
+    cout << "\n=== LISTADO DE TRANSACCIONES ===\n";
+    cout << "ID\tTipo\tProducto\tRelacionado\tCantidad\tTotal\tFecha\n";
+    cout << "--------------------------------------------------------------------------------\n";
+    
+    for (int i = 0; i < tienda->numTransacciones; i++) {
+        Transaccion& t = tienda->transacciones[i];
+        
+        int idxProducto = buscarIndiceProductoPorId(tienda, t.idProducto);
+        const char* nombreProducto = (idxProducto != -1) ? tienda->productos[idxProducto].nombre : "N/A";
+        
+        const char* nombreRelacionado = "N/A";
+        if (strcmp(t.tipo, "COMPRA") == 0) {
+            int idxProv = buscarIndiceProveedorPorId(tienda, t.idRelacionado);
+            if (idxProv != -1) nombreRelacionado = tienda->proveedores[idxProv].nombre;
+        } else {
+            int idxCli = buscarIndiceClientePorId(tienda, t.idRelacionado);
+            if (idxCli != -1) nombreRelacionado = tienda->clientes[idxCli].nombre;
+        }
+        
+        cout << t.id << "\t" << t.tipo << "\t" << nombreProducto << "\t" 
+             << nombreRelacionado << "\t" << t.cantidad << "\t$" << t.total 
+             << "\t" << t.fecha << endl;
+    }
+    cout << "Total de transacciones: " << tienda->numTransacciones << endl;
+}
+
 void menuGestionProductos(Tienda* tienda) {
     int opcion;
     do {
@@ -1964,7 +2527,46 @@ void menuGestionClientes(Tienda* tienda) {
 }
 
 void menuGestionTransacciones(Tienda* tienda) {
-    cout << "Gesti�n de transacciones a�n no implementada.\n";
+    int opcion;
+    do {
+        cout << "\n=== MEN� DE TRANSACCIONES ===\n";
+        cout << "1. Registrar compra (a proveedor).\n";
+        cout << "2. Registrar venta (a cliente).\n";
+        cout << "3. Buscar transacciones.\n";
+        cout << "4. Listar todas las transacciones\n";
+        cout << "5. Cancelar/Anular transacción\n";
+        cout << "0. Volver al menú principal.\n\n";
+        cout << "Seleccione una opci�n: ";
+        cin >> opcion;
+        cin.ignore(10000, '\n');
+
+        switch (opcion){
+            case 1:
+                registrarCompra(tienda);
+                break;
+            case 2:
+                registrarVenta(tienda);
+                break;
+            case 3:
+                menuBuscarTransaccion(tienda);
+                break;
+            case 4:
+                menuListarTransacciones(tienda);
+                break;
+            case 5:
+                cancelarTransaccion(tienda);
+                break;
+            case 0:
+                cout << "Volviendo al men� principal...\n";
+                break;
+            default:
+                cout << "Opci�n no v�lida.\n";
+        }
+        if (opcion != 0) {
+            cout << "\nPresione Enter para continuar...";
+            cin.get();
+        }
+    } while(opcion != 0);
 }
 
 void menuPrincipal(Tienda* tienda) {
