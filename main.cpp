@@ -596,12 +596,12 @@ void listarProveedores(Tienda* tienda) {
     }
     
     cout << "\n=== LISTADO DE PROVEEDORES ===\n";
-    cout << "ID\tNombre\t\t\tIdentificacion\tTelefono\tEmail\n";
+    cout << "ID\tNombre\t\tIdentificacion\tTelefono\tEmail\n";
     cout << "--------------------------------------------------------------------------------\n";
     
     for (int i = 0; i < tienda->numProveedores; i++) {
         Proveedor& p = tienda->proveedores[i];
-        cout << p.id << "\t" << p.nombre << "\t" << p.identificacion << "\t" << p.telefono << "\t" << p.email << endl;
+        cout << p.id << "\t" << p.nombre << "\t\t\t" << p.identificacion << "\t" << p.telefono << "\t" << p.email << endl;
     }
     cout << "--------------------------------------------------------------------------------\n";
     cout << "Total de proveedores: " << tienda->numProveedores << endl;
@@ -2155,6 +2155,8 @@ void cancelarTransaccion(Tienda* tienda) {
         return;
     }
     
+    limpiarBuffer();
+
     int indice = buscarIndiceTransaccionPorId(tienda, id);
     if (indice == -1) {
         cout << "Transaccion con ID " << id << " no encontrada.\n";
