@@ -179,6 +179,12 @@ void liberarTienda(Tienda* tienda) {
     delete[] tienda->proveedores;
     delete[] tienda->clientes;
     delete[] tienda->transacciones;
+    delete[] tienda;
+    tienda -> productos = nullptr;
+    tienda -> proveedores = nullptr;
+    tienda -> clientes = nullptr;
+    tienda -> transacciones = nullptr;
+    tienda = nullptr;
     cout << "Memoria de la tienda liberada correctamente." << endl;
 }
 
@@ -561,9 +567,9 @@ void aplicarCambios(Tienda* tienda, int indice, const CambiosProducto& cambios) 
             cout << "No se pudo actualizar el codigo: ya existe.\n";
         }
     }
-    if (cambios.nombreModificado) {
+    if (cambios.nombreModificado) { 
         strcpy(tienda->productos[indice].nombre, cambios.nuevoNombre);
-        cambiosAplicados = true;
+        cambiosAplicados = true; 
     }
     if (cambios.descripcionModificada) {
         strcpy(tienda->productos[indice].descripcion, cambios.nuevaDescripcion);
