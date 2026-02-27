@@ -699,6 +699,7 @@ void listarProductos(Tienda* tienda) {
         cout << "ID: " << p.id << ", Codigo: " << p.codigo << ", Nombre: " << p.nombre 
              << ", Precio: " << p.precio << "$, Stock: " << p.stock 
              << ", Fecha Registro: " << p.fechaRegistro << endl;
+        cout << "Descripcion: " << p.descripcion << endl;
     }
     cout << "Total de productos: " << tienda->numProductos << endl;
     cout << "--------------------------------------------------------------------------------\n";
@@ -2732,9 +2733,10 @@ void menuPrincipal(Tienda* tienda) {
     int opcion;
     do {
         limpiarPantalla();
-        cout << "======================";
-        cout << "\n=== MENU PRINCIPAL ===\n";
-        cout << "======================\n";
+        cout << "========================";
+        cout << "\n=== TIENDA " << tienda->nombre << " ===\n";
+        cout << "\n=== RIF:  " << tienda->rif << " ===\n";
+        cout << "========================\n\n";
         cout << "1. Gestion de productos\n";
         cout << "2. Gestion de proveedores\n";
         cout << "3. Gestion de clientes\n";
@@ -2769,7 +2771,7 @@ void menuPrincipal(Tienda* tienda) {
 int main() {
     setlocale(LC_ALL, "");
     Tienda miTienda;
-    inicializarTienda(&miTienda, "Garibaldi", "J-67676767");
+    inicializarTienda(&miTienda, "GARIBALDI", "J-67676767");
     
     menuPrincipal(&miTienda);
     
