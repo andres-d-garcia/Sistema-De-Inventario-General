@@ -110,6 +110,8 @@ struct CambiosCliente {
     char nuevaIdentificacion[20];
 };
 
+// --- Utilidades ---
+
 void limpiarPantalla() {
     #ifdef _WIN32
         system("cls");
@@ -200,7 +202,7 @@ void convertirAminusculas(char* destino, const char* origen) {
 bool contieneSubstring(const char* str, const char* substr) {
     char strMinusculas[200];
     char substrMinusculas[200];
-    convertirAminusculas(strMinusculas, str);
+    convertirAminusculas(strMinusculas, str);   
     convertirAminusculas(substrMinusculas, substr);
     return strstr(strMinusculas, substrMinusculas) != nullptr;
 }
@@ -490,6 +492,8 @@ int buscarIndiceTransaccionPorId(Tienda* tienda, int id) {
     }
     return -1;
 }
+
+// --- Funciones CRUD ---
 
 void apCodigo(CambiosProducto& cambios, const char* nuevoCodigo) {
     strcpy(cambios.nuevoCodigo, nuevoCodigo);
@@ -2409,6 +2413,8 @@ void buscarTransaccionPorTipo(Tienda* tienda, const char* tipo) {
     }
 }
 
+// --- Funciones de menú --- 
+
 void menuBuscarTransaccion(Tienda* tienda) {
     if (tienda->numTransacciones == 0) {
         cout << "No hay transacciones registradas para buscar.\n";
@@ -2773,6 +2779,8 @@ void menuPrincipal(Tienda* tienda) {
         }
     } while(opcion != 0);
 }
+
+// --- Main ---
 
 int main() {
     setlocale(LC_ALL, "");
