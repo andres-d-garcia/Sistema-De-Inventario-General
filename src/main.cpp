@@ -1917,7 +1917,7 @@ void eliminarCliente(Tienda* tienda) {
     }
     
     for (int i = indice; i < tienda->numClientes - 1; i++) {
-        tienda->clientes[i] = tienda->clientes[i + 1]; 
+        tienda->clientes[i] = tienda->clientes[i + 1];  
     }
     tienda->numClientes--;
     cout << "Cliente con ID " << id << " eliminado exitosamente.\n";
