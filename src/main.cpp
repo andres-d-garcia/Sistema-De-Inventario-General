@@ -5,6 +5,13 @@
 #include <limits>
 using namespace std;
 
+struct ArchivoHeader {
+    int cantidadRegistros;
+    int proximoId;
+    int registrosActivos;   
+    int version;
+};
+
 struct Producto {
     int id;
     char codigo[20];
@@ -13,6 +20,11 @@ struct Producto {
     int idProveedor;
     float precio;
     int stock;
+    int stockMinimo;
+    int totalVendidos;
+    bool eliminado;
+    time_t fechaUltimaVenta;
+    time_t fechaRegistro;
     char fechaRegistro[20];
 };
 
@@ -24,6 +36,10 @@ struct Proveedor {
     char email[100];
     char identificacion[20];
     char fechaRegistro[20];
+    bool eliminado;
+    time_t fechaRegistro;
+    time_t fechaUltimaModificacion;
+
 };
 
 struct Cliente {
@@ -34,6 +50,9 @@ struct Cliente {
     char email[100];
     char identificacion[20];
     char fechaRegistro[20];
+    bool eliminado;
+    time_t fechaRegistro;
+    time_t fechaUltimaModificacion;
 };
 
 struct Transaccion {
@@ -46,6 +65,11 @@ struct Transaccion {
     float total;
     char fecha[11];
     char descripcion[200];
+    int idCliente;
+    int idProveedor;
+    bool eliminado;
+    time_t fechaRegistro;
+    time_t fechaUltimaModificacion;
 };
 
 struct Tienda {
