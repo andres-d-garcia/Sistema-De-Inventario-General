@@ -224,13 +224,215 @@ bool actualizarHeader(const char* nombreArchivo, ArchivoHeader header) {
 bool inicializarSistema() {
     bool ok = true;
     ok &= inicializarArchivo(ARCHIVO_TIENDA);
-    ok &= inicializarArchivo(ARCHIVO_PRODUCTOS);
-    ok &= inicializarArchivo(ARCHIVO_PROVEEDORES);
-    ok &= inicializarArchivo(ARCHIVO_CLIENTES);
-    ok &= inicializarArchivo(ARCHIVO_TRANSACCIONES);
+    ok &= inicializarArchivo(ARCHIVO_PRODUCTO);
+    ok &= inicializarArchivo(ARCHIVO_PROVEEDOR);
+    ok &= inicializarArchivo(ARCHIVO_CLIENTE);
+    ok &= inicializarArchivo(ARCHIVO_TRANSACCION);
 
     if (ok) {
         cout << "Sistema de archivos inicializado correctamente." << endl;
     }
     return ok;
+}
+
+template<typename T>
+int escribirRegistroAlFinal(const char* nombreArchivo, T registro) {
+    fstream archivo(nombreArchivo, ios::in | ios::out | ios::binary);
+    if (!archivo.is_open()) return -1;
+
+    ArchivoHeader header = leerHeader(nombreArchivo);
+    int idAsignado = header.proximoId;
+    registro.id = idAsignado;
+
+    archivo.seekp(calcularOffset<T>(header.cantidadRegistros), ios::beg);
+    archivo.write(reinterpret_cast<char*>(&registro), sizeof(T));
+    archivo.close();
+
+    header.cantidadRegistros++;
+    header.proximoId++;
+    header.registrosActivos++;
+    actualizarHeader(nombreArchivo, header);
+
+    return idAsignado;
+}
+
+template<typename T>
+bool leerRegistroPorIndice(const char* nombreArchivo, int id, T& registro) {
+    fstream archivo(nombreArchivo, ios::in | ios::binary);
+    if (!archivo.is_open()) return false;
+
+    long offset = calcularOffset<T>(indiceFisico);
+    archivo.seekg(offset, ios::beg);
+    archivo.read(reinterpret_cast<char*>(&destino), sizeof(T));
+
+    bool ok = !archivo.fail();
+    archivo.close();
+    return ok;
+}
+
+template<typename T>
+bool escribirRegistroPorIndice(const char* nombreArchivo, int indiceFisico, T& registro) {
+    fstream archivo(nombreArchivo, ios::in | ios::out | ios::binary);
+    if (!archivo.is_open()) return false;
+
+    long offset = calcularOffset<T>(indiceFisico);
+    archivo.seekp(offset, ios::beg);
+    archivo.write(reinterpret_cast<char*>(&registro), sizeof(T));
+    archivo.close();
+    return true;
+}
+
+template<typename T>
+int buscarIndiceFisicoPorId(const char* nombreArchivo, int idBuscado) {
+    ArchivoHeader header = leerHeader(nombreArchivo);
+    if (header.cantidadRegistros == 0) return -1;
+
+    fstream archivo(nombreArchivo, ios::in | ios::binary);
+    if (!archivo.is_open()) return -1;
+
+    T registro;
+    for (int i = 0; i < header.cantidadRegistros; i++) {
+        long offset = calcularOffset<T>(i);
+        archivo.seekg(offset, ios::beg);
+        archivo.read(reinterpret_cast<char*>(&registro), sizeof(T));
+
+        if (!archivo.fail() && registro.id == idBuscado && !registro.eliminado) {
+            archivo.close();
+            return i;
+        }
+    }
+
+    archivo.close();
+    return -1;
+}
+
+template<typename T>
+bool borradoLogico(const char* nombreArchivo, int indiceFisico) {
+    T registro;
+    if (!leerRegistroPorIndice<T>(nombreArchivo, indiceFisico, registro)) return false;
+
+    registro.eliminado = true;
+    registro.fechaUltimaModificacion = time(nullptr);
+
+    if (!escribirRegistroPorIndice<T>(nombreArchivo, indiceFisico, registro)) return false;
+
+    ArchivoHeader header = leerHeader(nombreArchivo);
+    if (header.registrosActivos > 0) header.registrosActivos--;
+    actualizarHeader(nombreArchivo, header);
+
+    return true;
+}
+
+// ---- Validaciones de entrada ----   
+
+bool validarChar(const char* mensaje, char* destino, int tamanio) {
+    cout << mensaje;
+    cin.getline(destino, tamanio);
+    if (cin.fail()) {
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout << "ERROR: Entrada demasiado larga." << endl;
+        return false;
+    }
+    if (strlen(destino) == 0) {
+        cout << "ERROR: El campo no puede estar vacio." << endl;
+        return false;
+    }
+    if (strcmp(destino, "cancelar") == 0) {
+        cout << "Operacion cancelada." << endl;
+        return false;
+    }
+    return true;
+}
+
+bool validarInt(const char* mensaje, int& destino, bool permitirNegativos = false) {
+    cout << mensaje;
+    string input;
+    cin >> input;
+    limpiarBuffer();
+    if (input == "cancelar") { cout << "Operacion cancelada." << endl; return false; }
+    try {
+        destino = stoi(input);
+        if (!permitirNegativos && destino < 0) {
+            cout << "ERROR: El valor no puede ser negativo." << endl;
+            return false;
+        }
+        return true;
+    } catch (...) {
+        cout << "ERROR: Ingrese un numero valido." << endl;
+        return false;
+    }
+}
+
+bool validarFloat(const char* mensaje, float& destino) {
+    cout << mensaje;
+    string input;
+    cin >> input;
+    limpiarBuffer();
+    if (input == "cancelar") { cout << "Operacion cancelada." << endl; return false; }
+    try {
+        destino = stof(input);
+        if (destino < 0) { cout << "ERROR: El valor no puede ser negativo." << endl; return false; }
+        return true;
+    } catch (...) {
+        cout << "ERROR: Ingrese un numero valido." << endl;
+        return false;
+    }
+}
+
+bool validarEmail(const char* email) {
+    int len = strlen(email);
+    if (len < 5 || len > 100) {
+        cout << "ERROR: Email debe tener entre 5 y 100 caracteres." << endl;
+        return false;
+    }
+    const char* arroba = strchr(email, '@');
+    if (!arroba || arroba == email) {
+        cout << "ERROR: Email debe contener '@' y no puede estar al inicio." << endl;
+        return false;
+    }
+    const char* punto = strchr(arroba + 1, '.');
+    if (!punto || punto == arroba + 1) {
+        cout << "ERROR: Email debe contener '.' despues del '@'." << endl;
+        return false;
+    }
+    if (email[len - 1] == '.') {
+        cout << "ERROR: Email no puede terminar con punto." << endl;
+        return false;
+    }
+    if (strchr(email, ' ') != nullptr) {
+        cout << "ERROR: Email no puede contener espacios." << endl;
+        return false;
+    }
+    return true;
+}
+
+bool validarRIF(const char* rif) {
+    int len = strlen(rif);
+    if (len != 13) {
+        cout << "ERROR: RIF debe tener formato: T-12345678-V (13 caracteres)." << endl;
+        return false;
+    }
+    char tipo = toupper(rif[0]);
+    const char* tiposValidos = "JGVEPCD";
+    if (!strchr(tiposValidos, tipo)) {
+        cout << "ERROR: Tipo de RIF invalido. Debe ser J, G, V, E, P, C o D." << endl;
+        return false;
+    }
+    if (rif[1] != '-' || rif[10] != '-') {
+        cout << "ERROR: Formato RIF invalido. Los guiones deben estar en las posiciones 1 y 10." << endl;
+        return false;
+    }
+    for (int i = 2; i <= 9; i++) {
+        if (!isdigit(rif[i])) {
+            cout << "ERROR: Posiciones 2-9 del RIF deben ser digitos." << endl;
+            return false;
+        }
+    }
+    char verificador = toupper(rif[12]);
+    if (!isdigit(verificador) && verificador != 'K') {
+        cout << "ERROR: Digito verificador debe ser un numero (0-9) o la letra K." << endl;
+        return false;
+    }
+    return true;
 }
