@@ -1,15 +1,60 @@
 #include <iostream>
+#include <fstream>
 #include <cstring>
 #include <ctime>
 #include <cctype>
+#include <cstdio>
 #include <limits>
+#include <iomanip>
+#include <sys/stat.h>
+#include <direct.h>
 using namespace std;
 
+const char* ARCHIVO_TIENDA = "tienda.bin";
+const char* ARCHIVO_PRODUCTO = "productos.bin";
+const char* ARCHIVO_PROVEEDOR = "proveedores.bin";
+const char* ARCHIVO_CLIENTE = "clientes.bin";
+const char* ARCHIVO_TRANSACCION = "transacciones.bin";
+
+const int MAX_PRODUCTOS_POR_PROVEEDOR = 100;
+const int MAX_TRANSACCIONES_POR_ENTIDAD = 200;
+const int MAX_ITEMS_POR_TRANSACCION = 50;
 struct ArchivoHeader {
     int cantidadRegistros;
     int proximoId;
     int registrosActivos;   
     int version;
+};
+
+struct Tienda {
+    char nombre[100];
+    char rif[20];
+    char direccion[200];
+    char telefono[20];
+    char email[100];
+    int  totalProductos;
+    int  totalProveedores;
+    int  totalClientes;
+    int  totalTransacciones;
+    float totalVentas;
+    float totalCompras;
+    bool eliminado;
+    time_t fechaCreacion;
+    time_t fechaUltimaModificacion;
+};
+
+struct Proveedor {
+    int  id;
+    char nombre[100];
+    char direccion[200];
+    char telefono[20];
+    char email[100];
+    char identificacion[20];   // RIF formato J-12345678-9
+    int  productosIDs[MAX_PRODUCTOS_POR_PROVEEDOR];
+    int  cantidadProductos;
+    bool eliminado;
+    time_t fechaRegistro;
+    time_t fechaUltimaModificacion;
 };
 
 struct Producto {
@@ -27,111 +72,55 @@ struct Producto {
     time_t fechaRegistro;
     char fechaRegistro[20];
 };
-
-struct Proveedor {
-    int id;
-    char nombre[100];
-    char direccion[200];
-    char telefono[20];
-    char email[100];
-    char identificacion[20];
-    char fechaRegistro[20];
-    bool eliminado;
-    time_t fechaRegistro;
+struct Producto {
+    int   id;
+    char  codigo[20];
+    char  nombre[100];
+    char  descripcion[200];
+    float precio;
+    int   stock;
+    int   idProveedor;
+    int   stockMinimo;
+    int   totalVendidos;
+    bool  eliminado;
+    time_t fechaCreacion;
     time_t fechaUltimaModificacion;
-
 };
 
 struct Cliente {
-    int id;
+    int  id;
     char nombre[100];
     char direccion[200];
     char telefono[20];
     char email[100];
-    char identificacion[20];
-    char fechaRegistro[20];
+    char identificacion[20];   // Cedula formato V-12345678
+    int  comprasIDs[MAX_TRANSACCIONES_POR_ENTIDAD];
+    int  cantidadCompras;
+    float totalGastado;
     bool eliminado;
     time_t fechaRegistro;
     time_t fechaUltimaModificacion;
 };
 
-struct Transaccion {
-    int id;
-    char tipo[20];
+struct ItemTransaccion {
     int idProducto;
-    int idRelacionado;
     int cantidad;
     float precioUnitario;
+    float subtotal;
+};
+struct Transaccion {
+    int  id;
+    char tipo[10];              // "COMPRA" o "VENTA"
+    int  idCliente;             // Llave foranea (0 si es COMPRA)
+    int  idProveedor;           // Llave foranea (0 si es VENTA)
+    ItemTransaccion items[MAX_ITEMS_POR_TRANSACCION];
+    int  cantidadItems;
     float total;
     char fecha[11];
     char descripcion[200];
-    int idCliente;
-    int idProveedor;
     bool eliminado;
     time_t fechaRegistro;
     time_t fechaUltimaModificacion;
-};
-
-struct Tienda {
-    char nombre[100];
-    char rif[20];
-    Producto* productos;
-    int numProductos;
-    int capacidadProductos;
-    Proveedor* proveedores;
-    int numProveedores;
-    int capacidadProveedores;
-    Cliente* clientes;
-    int numClientes;
-    int capacidadClientes;
-    Transaccion* transacciones;
-    int numTransacciones;
-    int capacidadTransacciones;
-    int siguienteIdProducto;
-    int siguienteIdProveedor;
-    int siguienteIdCliente;
-    int siguienteIdTransaccion;
-};
-
-struct CambiosProducto {
-    bool codigoModificado;
-    char nuevoCodigo[20];
-    bool nombreModificado;
-    char nuevoNombre[100];
-    bool descripcionModificada;
-    char nuevaDescripcion[200];
-    bool proveedorModificado;
-    int nuevoIdProveedor;
-    bool precioModificado;
-    float nuevoPrecio;
-    bool stockModificado;
-    int nuevoStock;
-};
-
-struct CambiosProveedor {
-    bool nombreModificado;
-    char nuevoNombre[100];
-    bool direccionModificada;
-    char nuevaDireccion[200];
-    bool telefonoModificado;
-    char nuevoTelefono[20];
-    bool emailModificado;
-    char nuevoEmail[100];
-    bool identificacionModificada;
-    char nuevaIdentificacion[20];
-};
-
-struct CambiosCliente {
-    bool nombreModificado;
-    char nuevoNombre[100];
-    bool direccionModificada;
-    char nuevaDireccion[200];
-    bool telefonoModificado;
-    char nuevoTelefono[20];
-    bool emailModificado;
-    char nuevoEmail[100];
-    bool identificacionModificada;
-    char nuevaIdentificacion[20];
 };
 
 // --- Utilidades ---
