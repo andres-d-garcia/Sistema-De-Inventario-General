@@ -436,3 +436,85 @@ bool validarRIF(const char* rif) {
     }
     return true;
 }
+
+bool validarCedula(const char* cedula) {
+    int len = strlen(cedula);
+    if (len < 10 || len > 13) {
+        cout << "ERROR: Cedula debe tener entre 10 y 13 caracteres (T-12345678)." << endl;
+        return false;
+    }
+    char tipo_id = toupper(cedula[0]);
+    if (tipo_id != 'V' && tipo_id != 'E') {
+        cout << "ERROR: Cedula debe comenzar con V (Venezolano) o E (Extranjero)." << endl;
+        return false;
+    }
+    if (cedula[1] != '-') {
+        cout << "ERROR: Formato invalido. Ejemplo: V-12345678" << endl;
+        return false;
+    }
+    for (int i = 2; i < len; i++) {
+        if (!isdigit(cedula[i])) {
+            cout << "ERROR: Cedula debe contener solo digitos despues del tipo." << endl;
+            return false;
+        }
+    }
+    return true;
+}
+
+bool validarFecha(const char* fecha) {
+    if (strlen(fecha) != 10 || fecha[4] != '-' || fecha[7] != '-') {
+        cout << "ERROR: Formato de fecha debe ser YYYY-MM-DD." << endl;
+        return false;
+    }
+    int mes = atoi(string(fecha + 5, 2).c_str());
+    int dia = atoi(string(fecha + 8, 2).c_str());
+    if (mes < 1 || mes > 12 || dia < 1 || dia > 31) {
+        cout << "ERROR: Fecha fuera de rango." << endl;
+        return false;
+    }
+    return true;
+}
+
+// ---- Validacion de Unicidad ----
+
+bool codigoProductoExiste(const char* codigo, int idExcluir = -1) {
+    ArchivoHeader h = leerHeader(ARCHIVO_PRODUCTO);
+    Producto p;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, i, p) && !p.eliminado && p.id != idExcluir) {
+            char a[20], b[20];
+            convertirMinusculas(a, p.codigo);
+            convertirMinusculas(b, codigo);
+            if (strcmp(a, b) == 0) return true;
+        }
+    }
+    return false;
+}
+
+bool identificacionProveedorExiste(const char* id, int idExcluir = -1) {
+    ArchivoHeader h = leerHeader(ARCHIVO_PROVEEDOR);
+    Proveedor p;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, i, p) && !p.eliminado && p.id != idExcluir) {
+            char a[20], b[20];
+            convertirMinusculas(a, p.identificacion);
+            convertirMinusculas(b, id);
+            if (strcmp(a, b) == 0) return true;
+        }
+    }
+    return false;
+}
+
+bool identificacionClienteExiste(const char* id, int idExcluir = -1) {
+    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTE);
+    Cliente c;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, i, c) && !c.eliminado && c.id != idExcluir) {
+            char a[20], b[20];
+            convertirMinusculas(a, c.identificacion);
+            convertirMinusculas(b, id);
+            if (strcmp(a, b) == 0) return true;
+        }
+    }
+    return false;
+}
