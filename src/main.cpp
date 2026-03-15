@@ -598,3 +598,52 @@ void configurarTienda() {
         cout << "Tienda configurada exitosamente." << endl;
     }
 }
+
+// ---- Funciones de Producto ----
+
+void mostrarInfoProveedor(int idProveedor) {
+    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, idProveedor);
+    if (idx == -1) {
+        cout << "  Proveedor: [ID:" << idProveedor << " - No encontrado]" << endl;
+        return;
+    }
+    Proveedor prov;
+    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, prov);
+    cout << "  Proveedor: " << prov.nombre << " | RIF: " << prov.identificacion
+         << " | Tel: " << prov.telefono << endl;
+}
+
+void mostrarProducto(const Producto& p, bool detallado = false) {
+    char stockLabel[20] = "";
+    if (p.stock <= p.stockMinimo) strcpy(stockLabel, " [CRITICO]");
+
+    printf("ID: %-3d | Cod: %-10s | %-25s | $%-8.2f | Stock: %d%s\n",
+           p.id, p.codigo, p.nombre, p.precio, p.stock, stockLabel);
+
+    if (detallado) {
+        cout << "  Descripcion: " << p.descripcion << endl;
+        cout << "  Stock minimo: " << p.stockMinimo << " | Vendidos: " << p.totalVendidos << endl;
+        mostrarInfoProveedor(p.idProveedor);
+    }
+}
+
+void listarProductos() {
+    ArchivoHeader h = leerHeader(ARCHIVO_PRODUCTO);
+    if (h.registrosActivos == 0) {
+        cout << "No hay productos registrados." << endl;
+        return;
+    }
+    imprimirLinea(70, '=');
+    cout << "LISTADO DE PRODUCTOS (" << h.registrosActivos << " activos)" << endl;
+    imprimirLinea();
+    cout << "ID  | Codigo     | Nombre                    | Precio   | Stock" << endl;
+    imprimirLinea();
+
+    Producto p;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, i, p) && !p.eliminado) {
+            mostrarProducto(p);
+        }
+    }
+    imprimirLinea();
+}
