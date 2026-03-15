@@ -518,3 +518,83 @@ bool identificacionClienteExiste(const char* id, int idExcluir = -1) {
     }
     return false;
 }
+
+// ----Funciones de Tienda----
+
+bool tiendaExiste() {
+    ArchivoHeader h = leerHeader(ARCHIVO_TIENDA);
+    return h.cantidadRegistros > 0;
+}
+
+bool leerTienda(Tienda& t) {
+    return leerRegistroPorIndice<Tienda>(ARCHIVO_TIENDA, 0, t);
+}
+
+bool guardarTienda(Tienda& t) {
+    t.fechaUltimaModificacion = time(nullptr);
+    if (!tiendaExiste()) {
+        t.fechaCreacion = time(nullptr);
+        t.eliminado = false;
+        t.totalProductos = 0;
+        t.totalProveedores = 0;
+        t.totalClientes = 0;
+        t.totalTransacciones = 0;
+        t.totalVentas = 0;
+        t.totalCompras = 0;
+        return escribirRegistroAlFinal<Tienda>(ARCHIVO_TIENDA, t) >= 0;
+    } else {
+        return escribirRegistroPorIndice<Tienda>(ARCHIVO_TIENDA, 0, t);
+    }
+}
+
+void mostrarTienda(const Tienda& t) {
+    imprimirLinea();
+    cout << "INFORMACION DE LA TIENDA" << endl;
+    imprimirLinea();
+    cout << "Nombre:  " << t.nombre << endl;
+    cout << "RIF:     " << t.rif << endl;
+    cout << "Email:   " << t.email << endl;
+    cout << "Telefono:" << t.telefono << endl;
+    cout << "Direccion:" << t.direccion << endl;
+    imprimirLinea();
+    cout << "Estadisticas:" << endl;
+    cout << "  Productos:     " << t.totalProductos << endl;
+    cout << "  Proveedores:   " << t.totalProveedores << endl;
+    cout << "  Clientes:      " << t.totalClientes << endl;
+    cout << "  Transacciones: " << t.totalTransacciones << endl;
+    printf("  Ventas totales:  $%.2f\n", t.totalVentas);
+    printf("  Compras totales: $%.2f\n", t.totalCompras);
+    printf("  Balance:         $%.2f\n", t.totalVentas - t.totalCompras);
+    imprimirLinea();
+}
+
+void configurarTienda() {
+    limpiarPantalla();
+    Tienda t;
+    bool existe = tiendaExiste();
+
+    if (existe) {
+        leerTienda(t);
+        cout << "Tienda actual:" << endl;
+        mostrarTienda(t);
+        cout << "Desea modificar los datos de la tienda? (s/n): ";
+        char resp;
+        cin >> resp;
+        limpiarBuffer();
+        if (resp != 's' && resp != 'S') return;
+    } else {
+        memset(&t, 0, sizeof(Tienda));
+        cout << "=== CONFIGURACION INICIAL DE LA TIENDA ===" << endl;
+    }
+
+    if (!validarChar("Nombre de la tienda: ", t.nombre, 100)) return;
+    if (!validarChar("RIF de la tienda (J-XXXXXXXX-X): ", t.rif, 20)) return;
+    if (!validarChar("Direccion: ", t.direccion, 200)) return;
+    if (!validarChar("Telefono: ", t.telefono, 20)) return;
+    if (!validarChar("Email: ", t.email, 100)) return;
+    if (!validarEmail(t.email)) return;
+
+    if (guardarTienda(t)) {
+        cout << "Tienda configurada exitosamente." << endl;
+    }
+}
