@@ -647,3 +647,248 @@ void listarProductos() {
     }
     imprimirLinea();
 }
+
+// ---- CRUD DE Productos ----
+
+void listarProveedores();
+
+void crearProducto() {
+    limpiarPantalla();
+    ArchivoHeader hProv = leerHeader(ARCHIVO_PROVEEDOR);
+    if (hProv.registrosActivos == 0) {
+        cout << "ERROR: Debe registrar al menos un proveedor primero." << endl;
+        return;
+    }
+
+    cout << "=== REGISTRAR NUEVO PRODUCTO ===" << endl;
+
+    Producto p;
+    memset(&p, 0, sizeof(Producto));
+
+    if (!validarChar("Codigo (o 'cancelar'): ", p.codigo, 20)) return;
+    if (codigoProductoExiste(p.codigo)) {
+        cout << "ERROR: Ya existe un producto con ese codigo." << endl;
+        return;
+    }
+    if (!validarChar("Nombre (o 'cancelar'): ", p.nombre, 100)) return;
+    if (!validarChar("Descripcion (o 'cancelar'): ", p.descripcion, 200)) return;
+
+    listarProveedores();
+    do {
+        if (!validarInt("ID del proveedor (o 'cancelar'): ", p.idProveedor)) return;
+        if (buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, p.idProveedor) != -1) break;
+        cout << "ERROR: Proveedor con ID " << p.idProveedor << " no existe. Intente de nuevo." << endl;
+    } while(true);
+
+    if (!validarFloat("Precio: ", p.precio)) return;
+    if (p.precio <= 0) { cout << "ERROR: El precio debe ser mayor a 0." << endl; return; }
+    if (!validarInt("Stock inicial: ", p.stock)) return;
+    if (!validarInt("Stock minimo (para alertas): ", p.stockMinimo)) return;
+
+    ArchivoHeader h = leerHeader(ARCHIVO_PRODUCTO);
+    p.id = h.proximoId;
+    p.eliminado = false;
+    p.totalVendidos = 0;
+    p.fechaCreacion = time(nullptr);
+    p.fechaUltimaModificacion = time(nullptr);
+
+    imprimirLinea();
+    cout << "RESUMEN:" << endl;
+    mostrarProducto(p, true);
+    imprimirLinea();
+    cout << "Confirmar? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    int idx = escribirRegistroAlFinal<Producto>(ARCHIVO_PRODUCTO, p);
+    if (idx >= 0) {
+        int idxProv = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, p.idProveedor);
+        if (idxProv != -1) {
+            Proveedor prov;
+            leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idxProv, prov);
+            if (prov.cantidadProductos < MAX_PRODUCTOS_POR_PROVEEDOR) {
+                prov.productosIDs[prov.cantidadProductos++] = p.id;
+                prov.fechaUltimaModificacion = time(nullptr);
+                escribirRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idxProv, prov);
+            }
+        }
+
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalProductos++;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+
+        cout << "Producto creado con ID: " << p.id << endl;
+    }
+}
+
+void buscarProductoPorId(int id) {
+    int idx = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, id);
+    if (idx == -1) { cout << "Producto con ID " << id << " no encontrado." << endl; return; }
+    Producto p;
+    leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idx, p);
+    mostrarProducto(p, true);
+}
+
+void buscarProductoPorNombre(const char* nombre) {
+    ArchivoHeader h = leerHeader(ARCHIVO_PRODUCTO);
+    int encontrados = 0;
+    Producto p;
+    imprimirLinea();
+    cout << "Resultados para '" << nombre << "':" << endl;
+    imprimirLinea();
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, i, p) && !p.eliminado) {
+            if (contieneSubstring(p.nombre, nombre)) {
+                mostrarProducto(p);
+                encontrados++;
+            }
+        }
+    }
+    imprimirLinea();
+    if (encontrados == 0) cout << "Sin resultados." << endl;
+    else cout << "Total: " << encontrados << endl;
+    imprimirLinea();
+}
+
+void actualizarProducto() {
+    limpiarPantalla();
+    int id;
+    if (!validarInt("ID del producto a actualizar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, id);
+    if (idx == -1) { cout << "Producto no encontrado." << endl; return; }
+
+    Producto p;
+    leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idx, p);
+    cout << "Producto actual:" << endl;
+    mostrarProducto(p, true);
+
+    int op;
+    do {
+        cout << "\n=== ACTUALIZAR PRODUCTO ===" << endl;
+        cout << "1. Codigo    2. Nombre    3. Descripcion" << endl;
+        cout << "4. Proveedor 5. Precio    6. Stock" << endl;
+        cout << "7. Stock Minimo 8. Ajustar Stock 9. Guardar" << endl;
+        cout << "0. Cancelar" << endl;
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        char temp[200];
+        int tempInt;
+        float tempFloat;
+
+        switch(op) {
+            case 1:
+                if (validarChar("Nuevo codigo: ", temp, 20)) {
+                    if (codigoProductoExiste(temp, p.id)) cout << "ERROR: Codigo ya existe.\n";
+                    else strcpy(p.codigo, temp);
+                }
+                break;
+            case 2:
+                if (validarChar("Nuevo nombre: ", temp, 100)) strcpy(p.nombre, temp);
+                break;
+            case 3:
+                if (validarChar("Nueva descripcion: ", temp, 200)) strcpy(p.descripcion, temp);
+                break;
+            case 4: {
+                listarProveedores();
+                if (validarInt("Nuevo ID proveedor: ", tempInt)) {
+                    if (buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, tempInt) != -1)
+                        p.idProveedor = tempInt;
+                    else cout << "ERROR: Proveedor no existe.\n";
+                }
+                break;
+            }
+            case 5:
+                if (validarFloat("Nuevo precio: ", tempFloat) && tempFloat > 0) p.precio = tempFloat;
+                break;
+            case 6:
+                cout << "Stock actual: " << p.stock << endl;
+                if (validarInt("Nuevo stock: ", tempInt)) p.stock = tempInt;
+                break;
+            case 7:
+                if (validarInt("Nuevo stock minimo: ", tempInt)) p.stockMinimo = tempInt;
+                break;
+            case 8: {
+                int delta;
+                cout << "Stock actual: " << p.stock << endl;
+                if (validarInt("Cantidad a sumar (+)/restar (-): ", delta, true)) {
+                    p.stock += delta;
+                    cout << "Nuevo stock: " << p.stock << endl;
+                }
+                break;
+            }
+            case 9:
+                p.fechaUltimaModificacion = time(nullptr);
+                if (escribirRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idx, p))
+                    cout << "Producto actualizado exitosamente." << endl;
+                break;
+            case 0:
+                cout << "Cancelado.\n";
+                break;
+            default:
+                cout << "Opcion invalida.\n";
+        }
+    } while(op != 0 && op != 9);
+}
+
+void eliminarProducto() {
+    int id;
+    if (!validarInt("ID del producto a eliminar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, id);
+    if (idx == -1) { cout << "Producto no encontrado." << endl; return; }
+
+    Producto p;
+    leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idx, p);
+    mostrarProducto(p, true);
+
+    cout << "Confirmar eliminacion? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    if (borradoLogico<Producto>(ARCHIVO_PRODUCTO, idx)) {
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalProductos--;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+        cout << "Producto eliminado (borrado logico)." << endl;
+    }
+}
+
+void menuProductos() {
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        cout << "            GESTION DE PRODUCTOS" << endl;
+        imprimirLinea(70, '=');
+        cout << "1. Nuevo producto" << endl;
+        cout << "2. Listar productos" << endl;
+        cout << "3. Buscar por ID" << endl;
+        cout << "4. Buscar por nombre" << endl;
+        cout << "5. Actualizar producto" << endl;
+        cout << "6. Eliminar producto" << endl;
+        cout << "0. Volver" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: crearProducto(); break;
+            case 2: listarProductos(); break;
+            case 3: { int id; if(validarInt("ID: ", id)) buscarProductoPorId(id); break; }
+            case 4: { char n[100]; if(validarChar("Nombre: ", n, 100)) buscarProductoPorNombre(n); break; }
+            case 5: actualizarProducto(); break;
+            case 6: eliminarProducto(); break;
+            case 0: break;
+            default: cout << "Opcion invalida.\n";
+        }
+        if (op != 0) pausar();
+    } while(op != 0);
+}
