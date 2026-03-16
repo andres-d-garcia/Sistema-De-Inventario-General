@@ -1006,3 +1006,161 @@ void buscarProveedorPorNombre(const char* nombre) {
     imprimirLinea();
 }
 
+void actualizarProveedor() {
+    limpiarPantalla();
+    int id;
+    if (!validarInt("ID del proveedor a actualizar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDORES, id);
+    if (idx == -1) { cout << "Proveedor no encontrado." << endl; return; }
+
+    Proveedor p;
+    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDORES, idx, p);
+    cout << "Proveedor actual:" << endl;
+    mostrarProveedor(p, true);
+
+    int op;
+    do {
+        cout << "\n=== ACTUALIZAR PROVEEDOR ===" << endl;
+        cout << "1. Nombre       2. Direccion" << endl;
+        cout << "3. Telefono     4. Email" << endl;
+        cout << "5. Identificacion  9. Guardar" << endl;
+        cout << "0. Cancelar" << endl;
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        char temp[200];
+
+        switch(op) {
+            case 1:
+                if (validarChar("Nuevo nombre: ", temp, 100)) strcpy(p.nombre, temp);
+                break;
+            case 2:
+                if (validarChar("Nueva direccion: ", temp, 200)) strcpy(p.direccion, temp);
+                break;
+            case 3:
+                if (validarChar("Nuevo telefono: ", temp, 20)) strcpy(p.telefono, temp);
+                break;
+            case 4:
+                if (validarChar("Nuevo email: ", temp, 100) && validarEmail(temp))
+                    strcpy(p.email, temp);
+                break;
+            case 5:
+                cout << "Nueva identificacion: ";
+                cin.getline(temp, 20);
+                if (validarRIF(temp) && !identificacionProveedorExiste(temp, p.id))
+                    strcpy(p.identificacion, temp);
+                else if (identificacionProveedorExiste(temp, p.id))
+                    cout << "ERROR: Ya existe ese RIF." << endl;
+                break;
+            case 9:
+                p.fechaUltimaModificacion = time(nullptr);
+                if (escribirRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDORES, idx, p))
+                    cout << "Proveedor actualizado exitosamente." << endl;
+                break;
+            case 0:
+                cout << "Cancelado.\n";
+                break;
+            default:
+                cout << "Opcion invalida.\n";
+        }
+    } while(op != 0 && op != 9);
+}
+
+void eliminarProveedor() {
+    int id;
+    if (!validarInt("ID del proveedor a eliminar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, id);
+    if (idx == -1) { cout << "Proveedor no encontrado." << endl; return; }
+
+    Proveedor p;
+    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, p);
+    mostrarProveedor(p, true);
+
+    if (p.cantidadProductos > 0) {
+        cout << "ADVERTENCIA: Este proveedor tiene " << p.cantidadProductos << " producto(s) asociado(s)." << endl;
+    }
+
+    cout << "Confirmar eliminacion? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    if (borradoLogico<Proveedor>(ARCHIVO_PROVEEDOR, idx)) {
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalProveedores--;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+        cout << "Proveedor eliminado (borrado logico)." << endl;
+    }
+}
+
+void menuProveedores() {
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        cout << "           GESTION DE PROVEEDORES" << endl;
+        imprimirLinea(70, '=');
+        cout << "1. Nuevo proveedor" << endl;
+        cout << "2. Listar proveedores" << endl;
+        cout << "3. Buscar por ID" << endl;
+        cout << "4. Buscar por nombre" << endl;
+        cout << "5. Actualizar proveedor" << endl;
+        cout << "6. Eliminar proveedor" << endl;
+        cout << "0. Volver" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: crearProveedor(); break;
+            case 2: listarProveedores(); break;
+            case 3: { int id; if(validarInt("ID: ", id)) buscarProveedorPorId(id); break; }
+            case 4: { char n[100]; if(validarChar("Nombre: ", n, 100)) buscarProveedorPorNombre(n); break; }
+            case 5: actualizarProveedor(); break;
+            case 6: eliminarProveedor(); break;
+            case 0: break;
+            default: cout << "Opcion invalida.\n";
+        }
+        if (op != 0) pausar();
+    } while(op != 0);
+}
+
+// --- Funciones de Cliente ---
+
+void mostrarCliente(const Cliente& c, bool detallado = false) {
+    printf("ID: %-3d | %-25s | CI: %-12s | Tel: %s\n",
+           c.id, c.nombre, c.identificacion, c.telefono);
+    if (detallado) {
+        cout << "  Email:        " << c.email << endl;
+        cout << "  Direccion:    " << c.direccion << endl;
+        cout << "  Compras:      " << c.cantidadCompras << endl;
+        printf("  Total gastado: $%.2f\n", c.totalGastado);
+    }
+}
+
+void listarClientes() {
+    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTES);
+    if (h.registrosActivos == 0) {
+        cout << "No hay clientes registrados." << endl;
+        return;
+    }
+    imprimirLinea(70, '=');
+    cout << "LISTADO DE CLIENTES (" << h.registrosActivos << " activos)" << endl;
+    imprimirLinea();
+    cout << "ID  | Nombre                    | CI           | Telefono" << endl;
+    imprimirLinea();
+
+    Cliente c;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTES, i, c) && !c.eliminado) {
+            mostrarCliente(c);
+        }
+    }
+    imprimirLinea();
+}
+
+
