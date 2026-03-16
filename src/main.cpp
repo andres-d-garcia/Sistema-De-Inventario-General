@@ -892,3 +892,117 @@ void menuProductos() {
         if (op != 0) pausar();
     } while(op != 0);
 }
+
+// --- Funciones de Proveedor ---
+
+void mostrarProveedor(const Proveedor& p, bool detallado = false) {
+    printf("ID: %-3d | %-25s | RIF: %-12s | Tel: %s\n",
+           p.id, p.nombre, p.identificacion, p.telefono);
+    if (detallado) {
+        cout << "  Email:     " << p.email << endl;
+        cout << "  Direccion: " << p.direccion << endl;
+        cout << "  Productos: " << p.cantidadProductos << endl;
+    }
+}
+
+void listarProveedores() {
+    ArchivoHeader h = leerHeader(ARCHIVO_PROVEEDOR);
+    if (h.registrosActivos == 0) {
+        cout << "No hay proveedores registrados." << endl;
+        return;
+    }
+    imprimirLinea(70, '=');
+    cout << "LISTADO DE PROVEEDORES (" << h.registrosActivos << " activos)" << endl;
+    imprimirLinea();
+    cout << "ID  | Nombre                      | RIF          | Telefono" << endl;
+    imprimirLinea();
+
+    Proveedor p;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, i, p) && !p.eliminado) {
+            mostrarProveedor(p);
+        }
+    }
+    imprimirLinea();
+}
+
+// --- CRUD de Proveedores ---
+
+void crearProveedor() {
+    limpiarPantalla();
+    cout << "=== REGISTRAR NUEVO PROVEEDOR ===" << endl;
+
+    Proveedor p;
+    memset(&p, 0, sizeof(Proveedor)); // Inicializar todo en 0 para que se evite basura en campos no asignados
+
+    if (!validarChar("Nombre (o 'cancelar'): ", p.nombre, 100)) return;
+
+    cout << "Identificacion (RIF, formato J-12345678-9, o 'cancelar'): ";
+    cin.getline(p.identificacion, 20);
+    if (strcmp(p.identificacion, "cancelar") == 0) { cout << "Cancelado.\n"; return; }
+    if (!validarRIF(p.identificacion)) return;
+    if (identificacionProveedorExiste(p.identificacion)) {
+        cout << "ERROR: Ya existe un proveedor con esa identificacion." << endl;
+        return;
+    }
+
+    if (!validarChar("Telefono (o 'cancelar'): ", p.telefono, 20)) return;
+    if (!validarChar("Email (o 'cancelar'): ", p.email, 100)) return;
+    if (!validarEmail(p.email)) return;
+    if (!validarChar("Direccion (o 'cancelar'): ", p.direccion, 200)) return;
+
+    ArchivoHeader h = leerHeader(ARCHIVO_PROVEEDOR);
+    p.id = h.proximoId;
+    p.cantidadProductos = 0;
+    p.eliminado = false;
+    p.fechaRegistro = time(nullptr);
+    p.fechaUltimaModificacion = time(nullptr);
+
+    imprimirLinea();
+    cout << "RESUMEN:" << endl;
+    mostrarProveedor(p, true);
+    imprimirLinea();
+    cout << "Confirmar? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    if (escribirRegistroAlFinal<Proveedor>(ARCHIVO_PROVEEDOR, p) >= 0) {
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalProveedores++;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+        cout << "Proveedor creado con ID: " << p.id << endl;
+    }
+}
+
+void buscarProveedorPorId(int id) {
+    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, id);
+    if (idx == -1) { cout << "Proveedor no encontrado." << endl; return; }
+    Proveedor p;
+    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, p);
+    mostrarProveedor(p, true);
+}
+
+void buscarProveedorPorNombre(const char* nombre) {
+    ArchivoHeader h = leerHeader(ARCHIVO_PROVEEDOR);
+    int encontrados = 0;
+    Proveedor p;
+    imprimirLinea();
+    cout << "Resultados para '" << nombre << "':" << endl;
+    imprimirLinea();
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, i, p) && !p.eliminado) {
+            if (contieneSubstring(p.nombre, nombre)) {
+                mostrarProveedor(p);
+                encontrados++;
+            }
+        }
+    }
+    imprimirLinea();
+    if (encontrados == 0) cout << "Sin resultados." << endl;
+    else cout << "Total: " << encontrados << endl;
+    imprimirLinea();
+}
+
