@@ -1011,11 +1011,11 @@ void actualizarProveedor() {
     int id;
     if (!validarInt("ID del proveedor a actualizar (o 'cancelar'): ", id)) return;
 
-    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDORES, id);
+    int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, id);
     if (idx == -1) { cout << "Proveedor no encontrado." << endl; return; }
 
     Proveedor p;
-    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDORES, idx, p);
+    leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, p);
     cout << "Proveedor actual:" << endl;
     mostrarProveedor(p, true);
 
@@ -1055,7 +1055,7 @@ void actualizarProveedor() {
                 break;
             case 9:
                 p.fechaUltimaModificacion = time(nullptr);
-                if (escribirRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDORES, idx, p))
+                if (escribirRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, p))
                     cout << "Proveedor actualizado exitosamente." << endl;
                 break;
             case 0:
@@ -1143,7 +1143,7 @@ void mostrarCliente(const Cliente& c, bool detallado = false) {
 }
 
 void listarClientes() {
-    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTES);
+    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTE);
     if (h.registrosActivos == 0) {
         cout << "No hay clientes registrados." << endl;
         return;
@@ -1156,11 +1156,278 @@ void listarClientes() {
 
     Cliente c;
     for (int i = 0; i < h.cantidadRegistros; i++) {
-        if (leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTES, i, c) && !c.eliminado) {
+        if (leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, i, c) && !c.eliminado) {
             mostrarCliente(c);
         }
     }
     imprimirLinea();
 }
 
+// --- CRUD de clientes ---
 
+void crearCliente(){
+     limpiarPantalla();
+    cout << "=== REGISTRAR NUEVO CLIENTE ===" << endl;
+
+    Cliente c;
+    memset(&c, 0, sizeof(Cliente));
+
+    if (!validarChar("Nombre (o 'cancelar'): ", c.nombre, 100)) return;
+
+    cout << "Cedula (V-12345678 o E-12345678, o 'cancelar'): ";
+    cin.getline(c.identificacion, 20);
+    if (strcmp(c.identificacion, "cancelar") == 0) { cout << "Cancelado.\n"; return; }
+    if (!validarCedula(c.identificacion)) return;
+    if (identificacionClienteExiste(c.identificacion)) {
+        cout << "ERROR: Ya existe un cliente con esa cedula." << endl;
+        return;
+    }
+
+    if (!validarChar("Telefono (o 'cancelar'): ", c.telefono, 20)) return;
+    if (!validarChar("Email (o 'cancelar'): ", c.email, 100)) return;
+    if (!validarEmail(c.email)) return;
+    if (!validarChar("Direccion (o 'cancelar'): ", c.direccion, 200)) return;
+
+    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTE);
+    c.id = h.proximoId;
+    c.cantidadCompras = 0;
+    c.totalGastado = 0;
+    c.eliminado = false;
+    c.fechaRegistro = time(nullptr);
+    c.fechaUltimaModificacion = time(nullptr);
+
+    imprimirLinea();
+    cout << "RESUMEN:" << endl;
+    mostrarCliente(c, true);
+    imprimirLinea();
+    cout << "Confirmar? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    if (escribirRegistroAlFinal<Cliente>(ARCHIVO_CLIENTE, c) >= 0) {
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalClientes++;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+        cout << "Cliente creado con ID: " << c.id << endl;
+    }
+}
+
+void buscarClientePorId(int id) {
+    int idx = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, id);
+    if (idx == -1) { cout << "Cliente no encontrado." << endl; return; }
+    Cliente c;
+    leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idx, c);
+    mostrarCliente(c, true);
+}
+
+void buscarClientePorNombre(const char* nombre) {
+    ArchivoHeader h = leerHeader(ARCHIVO_CLIENTE);
+    int encontrados = 0;
+    Cliente c;
+    imprimirLinea();
+    cout << "Resultados para '" << nombre << "':" << endl;
+    imprimirLinea();
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, i, c) && !c.eliminado) {
+            if (contieneSubstring(c.nombre, nombre)) {
+                mostrarCliente(c);
+                encontrados++;
+            }
+        }
+    }
+    imprimirLinea();
+    if (encontrados == 0) cout << "Sin resultados." << endl;
+    else cout << "Total: " << encontrados << endl;
+    imprimirLinea();
+}
+
+void actualizarCliente() {
+    limpiarPantalla();
+    int id;
+    if (!validarInt("ID del cliente a actualizar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, id);
+    if (idx == -1) { cout << "Cliente no encontrado." << endl; return; }
+
+    Cliente c;
+    leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idx, c);
+    cout << "Cliente actual:" << endl;
+    mostrarCliente(c, true);
+
+    int op;
+    do {
+        cout << "\n=== ACTUALIZAR CLIENTE ===" << endl;
+        cout << "1. Nombre    2. Direccion" << endl;
+        cout << "3. Telefono  4. Email" << endl;
+        cout << "5. Cedula    9. Guardar" << endl;
+        cout << "0. Cancelar" << endl;
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        char temp[200];
+
+        switch(op) {
+            case 1:
+                if (validarChar("Nuevo nombre: ", temp, 100)) strcpy(c.nombre, temp);
+                break;
+            case 2:
+                if (validarChar("Nueva direccion: ", temp, 200)) strcpy(c.direccion, temp);
+                break;
+            case 3:
+                if (validarChar("Nuevo telefono: ", temp, 20)) strcpy(c.telefono, temp);
+                break;
+            case 4:
+                if (validarChar("Nuevo email: ", temp, 100) && validarEmail(temp))
+                    strcpy(c.email, temp);
+                break;
+            case 5:
+                cout << "Nueva cedula: ";
+                cin.getline(temp, 20);
+                if (validarCedula(temp) && !identificacionClienteExiste(temp, c.id))
+                    strcpy(c.identificacion, temp);
+                else if (identificacionClienteExiste(temp, c.id))
+                    cout << "ERROR: Ya existe esa cedula." << endl;
+                break;
+            case 9:
+                c.fechaUltimaModificacion = time(nullptr);
+                if (escribirRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idx, c))
+                    cout << "Cliente actualizado exitosamente." << endl;
+                break;
+            case 0:
+                cout << "Cancelado.\n";
+                break;
+            default:
+                cout << "Opcion invalida.\n";
+        }
+    } while(op != 0 && op != 9);
+}
+
+void eliminarCliente() {
+    int id;
+    if (!validarInt("ID del cliente a eliminar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, id);
+    if (idx == -1) { cout << "Cliente no encontrado." << endl; return; }
+
+    Cliente c;
+    leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idx, c);
+    mostrarCliente(c, true);
+
+    if (c.cantidadCompras > 0) {
+        cout << "ADVERTENCIA: Este cliente tiene " << c.cantidadCompras << " compra(s)." << endl;
+    }
+
+    cout << "Confirmar eliminacion? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    if (borradoLogico<Cliente>(ARCHIVO_CLIENTE, idx)) {
+        Tienda t;
+        if (leerTienda(t)) {
+            t.totalClientes--;
+            t.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(t);
+        }
+        cout << "Cliente eliminado (borrado logico)." << endl;
+    }
+}
+
+void menuClientes() {
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        cout << "             GESTION DE CLIENTES" << endl;
+        imprimirLinea(70, '=');
+        cout << "1. Nuevo cliente" << endl;
+        cout << "2. Listar clientes" << endl;
+        cout << "3. Buscar por ID" << endl;
+        cout << "4. Buscar por nombre" << endl;
+        cout << "5. Actualizar cliente" << endl;
+        cout << "6. Eliminar cliente" << endl;
+        cout << "0. Volver" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: crearCliente(); break;
+            case 2: listarClientes(); break;
+            case 3: { int id; if(validarInt("ID: ", id)) buscarClientePorId(id); break; }
+            case 4: { char n[100]; if(validarChar("Nombre: ", n, 100)) buscarClientePorNombre(n); break; }
+            case 5: actualizarCliente(); break;
+            case 6: eliminarCliente(); break;
+            case 0: break;
+            default: cout << "Opcion invalida.\n";
+        }
+        if (op != 0) pausar();
+    } while(op != 0);
+}
+
+// --- Funciones de Transaccion ---
+
+
+void mostrarTransaccion(const Transaccion& t, bool detallado = false) {
+    const char* contraparte = "N/A";
+    char nombreContraparte[100] = "N/A";
+
+    if (strcmp(t.tipo, "VENTA") == 0) {
+        int idx = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, t.idCliente);
+        if (idx != -1) {
+            Cliente c; leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idx, c);
+            strcpy(nombreContraparte, c.nombre);
+        }
+        contraparte = "Cliente";
+    } else {
+        int idx = buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, t.idProveedor);
+        if (idx != -1) {
+            Proveedor p; leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, idx, p);
+            strcpy(nombreContraparte, p.nombre);
+        }
+        contraparte = "Proveedor";
+    }
+
+    printf("ID: %-3d | %-6s | %s: %-20s | Items: %d | Total: $%.2f | Fecha: %s\n",
+           t.id, t.tipo, contraparte, nombreContraparte,
+           t.cantidadItems, t.total, t.fecha);
+
+    if (detallado) {
+        cout << "  Descripcion: " << t.descripcion << endl;
+        imprimirLinea(50);
+        cout << "  DETALLE DE ITEMS:" << endl;
+        for (int i = 0; i < t.cantidadItems; i++) {
+            const ItemTransaccion& item = t.items[i];
+            int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, item.idProducto);
+            char nomProd[100] = "N/A";
+            if (idxProd != -1) {
+                Producto prod; leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+                strcpy(nomProd, prod.nombre);
+            }
+            printf("  %d) %-20s | Cant: %d | P.Unit: $%.2f | Sub: $%.2f\n",
+                   i+1, nomProd, item.cantidad, item.precioUnitario, item.subtotal);
+        }
+        imprimirLinea(50);
+    }
+}
+
+void listarTransacciones() {
+    ArchivoHeader h = leerHeader(ARCHIVO_TRANSACCION);
+    if (h.registrosActivos == 0) {
+        cout << "No hay transacciones registradas." << endl;
+        return;
+    }
+    imprimirLinea(70, '=');
+    cout << "LISTADO DE TRANSACCIONES (" << h.registrosActivos << " activas)" << endl;
+    imprimirLinea();
+
+    Transaccion t;
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Transaccion>(ARCHIVO_TRANSACCION, i, t) && !t.eliminado) {
+            mostrarTransaccion(t);
+        }
+    }
+    imprimirLinea();
+}
