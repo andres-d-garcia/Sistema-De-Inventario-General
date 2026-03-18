@@ -1977,7 +1977,6 @@ void menuReportes() {
         if (op != 0) pausar();
     } while(op != 0);
 }
-
 // --- Menu Principal ---
 
 void menuPrincipal() {
