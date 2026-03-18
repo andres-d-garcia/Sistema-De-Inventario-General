@@ -1420,3 +1420,357 @@ void listarTransacciones() {
     }
     imprimirLinea();
 }
+
+// --- CRUD de Transaccion ---
+
+void registrarVenta() {
+    limpiarPantalla();
+    ArchivoHeader hCli = leerHeader(ARCHIVO_CLIENTE);
+    ArchivoHeader hProd = leerHeader(ARCHIVO_PRODUCTO);
+    if (hCli.registrosActivos == 0) { cout << "ERROR: No hay clientes registrados.\n"; return; }
+    if (hProd.registrosActivos == 0) { cout << "ERROR: No hay productos registrados.\n"; return; }
+
+    cout << "=== REGISTRAR VENTA ===" << endl;
+
+    Transaccion t;
+    memset(&t, 0, sizeof(Transaccion));
+    strcpy(t.tipo, "VENTA");
+
+    listarClientes();
+    if (!validarInt("ID del cliente (o 'cancelar'): ", t.idCliente)) return;
+    if (buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, t.idCliente) == -1) {
+        cout << "ERROR: Cliente no existe." << endl; return;
+    }
+
+    t.cantidadItems = 0;
+    t.total = 0.0f;
+    char continuar[5] = "s";
+
+    while (t.cantidadItems < MAX_ITEMS_POR_TRANSACCION && tolower(continuar[0]) == 's') {
+        listarProductos();
+        ItemTransaccion item;
+
+        if (!validarInt("ID del producto (o 'cancelar'): ", item.idProducto)) break;
+
+        int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, item.idProducto);
+        if (idxProd == -1) { cout << "ERROR: Producto no existe.\n"; continue; }
+
+        Producto prod;
+        leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+        cout << "Stock disponible: " << prod.stock << endl;
+
+        if (!validarInt("Cantidad: ", item.cantidad)) break;
+        if (item.cantidad <= 0) { cout << "ERROR: Cantidad invalida.\n"; continue; }
+        if (item.cantidad > prod.stock) {
+            cout << "ERROR: Stock insuficiente (disponible: " << prod.stock << ").\n";
+            continue;
+        }
+
+        printf("Precio del producto: $%.2f\n", prod.precio);
+        cout << "Usar precio del producto? (s/n): ";
+        char usarPrecio[5]; cin.getline(usarPrecio, 5);
+        if (tolower(usarPrecio[0]) == 's') {
+            item.precioUnitario = prod.precio;
+        } else {
+            if (!validarFloat("Precio unitario: ", item.precioUnitario)) break;
+            if (item.precioUnitario <= 0) { cout << "ERROR: Precio invalido.\n"; continue; }
+        }
+
+        item.subtotal = item.cantidad * item.precioUnitario;
+        t.items[t.cantidadItems++] = item;
+        t.total += item.subtotal;
+
+        printf("Item agregado. Subtotal: $%.2f | Total acumulado: $%.2f\n",
+               item.subtotal, t.total);
+
+        if (t.cantidadItems < MAX_ITEMS_POR_TRANSACCION) {
+            cout << "Agregar otro producto? (s/n): ";
+            cin.getline(continuar, 5);
+        }
+    }
+
+    if (t.cantidadItems == 0) { cout << "No se agregaron items. Venta cancelada.\n"; return; }
+
+    cout << "Descripcion (Enter para omitir): ";
+    cin.getline(t.descripcion, 200);
+    obtenerFechaActual(t.fecha, 11);
+
+    imprimirLinea();
+    cout << "RESUMEN DE VENTA:" << endl;
+    mostrarTransaccion(t, true);
+    imprimirLinea();
+    cout << "Confirmar venta? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Venta cancelada.\n"; return; }
+
+    ArchivoHeader hTrans = leerHeader(ARCHIVO_TRANSACCION);
+    t.id = hTrans.proximoId;
+    t.eliminado = false;
+    t.fechaRegistro = time(nullptr);
+    t.fechaUltimaModificacion = time(nullptr);
+
+    int idxTrans = escribirRegistroAlFinal<Transaccion>(ARCHIVO_TRANSACCION, t);
+    if (idxTrans < 0) { cout << "ERROR al guardar la transaccion.\n"; return; }
+
+    for (int i = 0; i < t.cantidadItems; i++) {
+        int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, t.items[i].idProducto);
+        if (idxProd != -1) {
+            Producto prod;
+            leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+            prod.stock -= t.items[i].cantidad;
+            prod.totalVendidos += t.items[i].cantidad;
+            prod.fechaUltimaModificacion = time(nullptr);
+            escribirRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+        }
+    }
+
+    int idxCli = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, t.idCliente);
+    if (idxCli != -1) {
+        Cliente c;
+        leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idxCli, c);
+        if (c.cantidadCompras < MAX_TRANSACCIONES_POR_ENTIDAD)
+            c.comprasIDs[c.cantidadCompras++] = t.id;
+        c.totalGastado += t.total;
+        c.fechaUltimaModificacion = time(nullptr);
+        escribirRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idxCli, c);
+    }
+
+    Tienda td;
+    if (leerTienda(td)) {
+        td.totalTransacciones++;
+        td.totalVentas += t.total;
+        td.fechaUltimaModificacion = time(nullptr);
+        guardarTienda(td);
+    }
+
+    cout << "Venta registrada exitosamente con ID: " << t.id << endl;
+}
+
+void registrarCompra() {
+    limpiarPantalla();
+    ArchivoHeader hProv = leerHeader(ARCHIVO_PROVEEDOR);
+    ArchivoHeader hProd = leerHeader(ARCHIVO_PRODUCTO);
+    if (hProv.registrosActivos == 0) { cout << "ERROR: No hay proveedores registrados.\n"; return; }
+    if (hProd.registrosActivos == 0) { cout << "ERROR: No hay productos registrados.\n"; return; }
+
+    cout << "=== REGISTRAR COMPRA ===" << endl;
+
+    Transaccion t;
+    memset(&t, 0, sizeof(Transaccion));
+    strcpy(t.tipo, "COMPRA");
+
+    listarProveedores();
+    if (!validarInt("ID del proveedor (o 'cancelar'): ", t.idProveedor)) return;
+    if (buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, t.idProveedor) == -1) {
+        cout << "ERROR: Proveedor no existe." << endl; return;
+    }
+
+    t.cantidadItems = 0;
+    t.total = 0.0f;
+    char continuar[5] = "s";
+
+    while (t.cantidadItems < MAX_ITEMS_POR_TRANSACCION && tolower(continuar[0]) == 's') {
+        listarProductos();
+        ItemTransaccion item;
+
+        if (!validarInt("ID del producto (o 'cancelar'): ", item.idProducto)) break;
+
+        int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, item.idProducto);
+        if (idxProd == -1) { cout << "ERROR: Producto no existe.\n"; continue; }
+
+        if (!validarInt("Cantidad a comprar: ", item.cantidad)) break;
+        if (item.cantidad <= 0) { cout << "ERROR: Cantidad invalida.\n"; continue; }
+
+        if (!validarFloat("Precio unitario de compra: ", item.precioUnitario)) break;
+        if (item.precioUnitario <= 0) { cout << "ERROR: Precio invalido.\n"; continue; }
+
+        item.subtotal = item.cantidad * item.precioUnitario;
+        t.items[t.cantidadItems++] = item;
+        t.total += item.subtotal;
+
+        printf("Item agregado. Subtotal: $%.2f | Total acumulado: $%.2f\n",
+               item.subtotal, t.total);
+
+        if (t.cantidadItems < MAX_ITEMS_POR_TRANSACCION) {
+            cout << "Agregar otro producto? (s/n): ";
+            cin.getline(continuar, 5);
+        }
+    }
+
+    if (t.cantidadItems == 0) { cout << "No se agregaron items. Compra cancelada.\n"; return; }
+
+    cout << "Descripcion (Enter para omitir): ";
+    cin.getline(t.descripcion, 200);
+    obtenerFechaActual(t.fecha, 11);
+
+    imprimirLinea();
+    cout << "RESUMEN DE COMPRA:" << endl;
+    mostrarTransaccion(t, true);
+    imprimirLinea();
+    cout << "Confirmar compra? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Compra cancelada.\n"; return; }
+
+    ArchivoHeader hTrans = leerHeader(ARCHIVO_TRANSACCION);
+    t.id = hTrans.proximoId;
+    t.eliminado = false;
+    t.fechaRegistro = time(nullptr);
+    t.fechaUltimaModificacion = time(nullptr);
+
+    int idxTrans = escribirRegistroAlFinal<Transaccion>(ARCHIVO_TRANSACCION, t);
+    if (idxTrans < 0) { cout << "ERROR al guardar.\n"; return; }
+
+    for (int i = 0; i < t.cantidadItems; i++) {
+        int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, t.items[i].idProducto);
+        if (idxProd != -1) {
+            Producto prod;
+            leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+            prod.stock += t.items[i].cantidad;
+            prod.fechaUltimaModificacion = time(nullptr);
+            escribirRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+        }
+    }
+
+    Tienda td;
+    if (leerTienda(td)) {
+        td.totalTransacciones++;
+        td.totalCompras += t.total;
+        td.fechaUltimaModificacion = time(nullptr);
+        guardarTienda(td);
+    }
+
+    cout << "Compra registrada exitosamente con ID: " << t.id << endl;
+}
+
+void buscarTransaccionPorId(int id) {
+    int idx = buscarIndiceFisicoPorId<Transaccion>(ARCHIVO_TRANSACCION, id);
+    if (idx == -1) { cout << "Transaccion no encontrada.\n"; return; }
+    Transaccion t;
+    leerRegistroPorIndice<Transaccion>(ARCHIVO_TRANSACCION, idx, t);
+    mostrarTransaccion(t, true);
+}
+
+void buscarTransaccionesPorCliente(int idCliente) {
+    int idxCli = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, idCliente);
+    if (idxCli == -1) { cout << "Cliente no encontrado.\n"; return; }
+
+    Cliente c; leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idxCli, c);
+    cout << "Historial de compras de: " << c.nombre << endl;
+    imprimirLinea();
+
+    float totalAcum = 0;
+    for (int i = 0; i < c.cantidadCompras; i++) {
+        int idxTrans = buscarIndiceFisicoPorId<Transaccion>(ARCHIVO_TRANSACCION, c.comprasIDs[i]);
+        if (idxTrans != -1) {
+            Transaccion t;
+            leerRegistroPorIndice<Transaccion>(ARCHIVO_TRANSACCION, idxTrans, t);
+            mostrarTransaccion(t, true);
+            totalAcum += t.total;
+        }
+    }
+    imprimirLinea();
+    printf("Total historico del cliente: $%.2f\n", totalAcum);
+}
+
+void cancelarTransaccion() {
+    int id;
+    if (!validarInt("ID de la transaccion a cancelar (o 'cancelar'): ", id)) return;
+
+    int idx = buscarIndiceFisicoPorId<Transaccion>(ARCHIVO_TRANSACCION, id);
+    if (idx == -1) { cout << "Transaccion no encontrada.\n"; return; }
+
+    Transaccion t;
+    leerRegistroPorIndice<Transaccion>(ARCHIVO_TRANSACCION, idx, t);
+    mostrarTransaccion(t, true);
+
+    if (strcmp(t.tipo, "VENTA") == 0) {
+        cout << "ADVERTENCIA: Se devolvera el stock de " << t.cantidadItems << " producto(s)." << endl;
+    } else {
+        cout << "ADVERTENCIA: Se restara el stock de " << t.cantidadItems << " producto(s)." << endl;
+    }
+
+    cout << "Confirmar cancelacion? (s/n): ";
+    char conf[5]; cin.getline(conf, 5);
+    if (tolower(conf[0]) != 's') { cout << "Cancelado.\n"; return; }
+
+    for (int i = 0; i < t.cantidadItems; i++) {
+        int idxProd = buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, t.items[i].idProducto);
+        if (idxProd != -1) {
+            Producto prod;
+            leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+            if (strcmp(t.tipo, "VENTA") == 0) {
+                prod.stock += t.items[i].cantidad;
+                prod.totalVendidos -= t.items[i].cantidad;
+                if (prod.totalVendidos < 0) prod.totalVendidos = 0;
+            } else {
+                prod.stock -= t.items[i].cantidad;
+                if (prod.stock < 0) prod.stock = 0;
+            }
+            prod.fechaUltimaModificacion = time(nullptr);
+            escribirRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, idxProd, prod);
+        }
+    }
+
+    if (strcmp(t.tipo, "VENTA") == 0) {
+        int idxCli = buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, t.idCliente);
+        if (idxCli != -1) {
+            Cliente c;
+            leerRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idxCli, c);
+            c.totalGastado -= t.total;
+            if (c.totalGastado < 0) c.totalGastado = 0;
+            c.fechaUltimaModificacion = time(nullptr);
+            escribirRegistroPorIndice<Cliente>(ARCHIVO_CLIENTE, idxCli, c);
+        }
+
+        Tienda td;
+        if (leerTienda(td)) {
+            td.totalVentas -= t.total;
+            if (td.totalVentas < 0) td.totalVentas = 0;
+            td.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(td);
+        }
+    } else {
+        Tienda td;
+        if (leerTienda(td)) {
+            td.totalCompras -= t.total;
+            if (td.totalCompras < 0) td.totalCompras = 0;
+            td.fechaUltimaModificacion = time(nullptr);
+            guardarTienda(td);
+        }
+    }
+
+    if (borradoLogico<Transaccion>(ARCHIVO_TRANSACCION, idx))
+        cout << "Transaccion cancelada exitosamente (borrado logico)." << endl;
+}
+
+void menuTransacciones() {
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        cout << "           GESTION DE TRANSACCIONES" << endl;
+        imprimirLinea(70, '=');
+        cout << "1. Registrar venta" << endl;
+        cout << "2. Registrar compra" << endl;
+        cout << "3. Listar transacciones" << endl;
+        cout << "4. Buscar por ID" << endl;
+        cout << "5. Historial de cliente" << endl;
+        cout << "6. Cancelar transaccion" << endl;
+        cout << "0. Volver" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: registrarVenta(); break;
+            case 2: registrarCompra(); break;
+            case 3: listarTransacciones(); break;
+            case 4: { int id; if(validarInt("ID: ", id)) buscarTransaccionPorId(id); break; }
+            case 5: { int id; if(validarInt("ID del cliente: ", id)) buscarTransaccionesPorCliente(id); break; }
+            case 6: cancelarTransaccion(); break;
+            case 0: break;
+            default: cout << "Opcion invalida.\n";
+        }
+        if (op != 0) pausar();
+    } while(op != 0);
+}
