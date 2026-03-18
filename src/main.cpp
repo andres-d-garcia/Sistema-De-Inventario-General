@@ -892,36 +892,3 @@ void menuProductos() {
         if (op != 0) pausar();
     } while(op != 0);
 }
-
-// ---- Funciones de Proveedor ----
-
-void mostrarProveedor(const Proveedor& p, bool detallado = false) {
-    printf("ID: %-3d | %-25s | RIF: %-12s | Tel: %s\n",
-           p.id, p.nombre, p.identificacion, p.telefono);
-    if (detallado) {
-        cout << "  Email:     " << p.email << endl;
-        cout << "  Direccion: " << p.direccion << endl;
-        cout << "  Productos: " << p.cantidadProductos << endl;
-    }
-}
-
-void listarProveedores() {
-    ArchivoHeader h = leerHeader(ARCHIVO_PROVEEDOR);
-    if (h.registrosActivos == 0) {
-        cout << "No hay proveedores registrados." << endl;
-        return;
-    }
-    imprimirLinea(70, '=');
-    cout << "LISTADO DE PROVEEDORES (" << h.registrosActivos << " activos)" << endl;
-    imprimirLinea();
-    cout << "ID  | Nombre                      | RIF          | Telefono" << endl;
-    imprimirLinea();
-
-    Proveedor p;
-    for (int i = 0; i < h.cantidadRegistros; i++) {
-        if (leerRegistroPorIndice<Proveedor>(ARCHIVO_PROVEEDOR, i, p) && !p.eliminado) {
-            mostrarProveedor(p);
-        }
-    }
-    imprimirLinea();
-}
