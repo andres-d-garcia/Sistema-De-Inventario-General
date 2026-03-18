@@ -1977,3 +1977,44 @@ void menuReportes() {
         if (op != 0) pausar();
     } while(op != 0);
 }
+
+// --- Menu Principal ---
+
+void menuPrincipal() {
+    Tienda tda;
+    bool hayTienda = tiendaExiste() && leerTienda(tda);
+
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        if (hayTienda) {
+            cout << "   SISTEMA DE INVENTARIO | " << tda.nombre
+                 << " | RIF: " << tda.rif << endl;
+        } else {
+            cout << "   SISTEMA DE INVENTARIO" << endl;
+        }
+        imprimirLinea(70, '=');
+        cout << "1. Gestion de Productos" << endl;
+        cout << "2. Gestion de Proveedores" << endl;
+        cout << "3. Gestion de Clientes" << endl;
+        cout << "4. Gestion de Transacciones" << endl;
+        cout << "5. Reportes y Mantenimiento" << endl;
+        cout << "6. Configurar Tienda" << endl;
+        cout << "0. Salir" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: menuProductos(); break;
+            case 2: menuProveedores(); break;
+            case 3: menuClientes(); break;
+            case 4: menuTransacciones(); break;
+            case 5: menuReportes(); break;
+            case 6: configurarTienda(); hayTienda = tiendaExiste() && leerTienda(tda); break;
+            case 0: cout << "Saliendo...\n"; break;
+            default: cout << "Opcion invalida.\n";
+        }
+    } while(op != 0);
+}
