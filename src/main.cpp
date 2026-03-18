@@ -1774,3 +1774,206 @@ void menuTransacciones() {
         if (op != 0) pausar();
     } while(op != 0);
 }
+
+// --- Reportes y Mantenimiento ---
+
+void verificarIntegridadReferencial() {
+    limpiarPantalla();
+    imprimirLinea(70, '=');
+    cout << "       VERIFICACION DE INTEGRIDAD REFERENCIAL" << endl;
+    imprimirLinea(70, '=');
+
+    int errores = 0;
+
+    cout << "\n[1] Verificando productos -> proveedores..." << endl;
+    ArchivoHeader hProd = leerHeader(ARCHIVO_PRODUCTO);
+    Producto prod;
+    for (int i = 0; i < hProd.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, i, prod) && !prod.eliminado) {
+            if (buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, prod.idProveedor) == -1) {
+                cout << "  [ERROR] Producto ID:" << prod.id << " (" << prod.nombre
+                     << ") -> proveedor ID:" << prod.idProveedor << " NO EXISTE." << endl;
+                errores++;
+            }
+        }
+    }
+    if (errores == 0) cout << "  OK - Todos los productos tienen proveedor valido." << endl;
+
+    int erroresTrans = 0;
+    cout << "\n[2] Verificando transacciones -> entidades relacionadas..." << endl;
+    ArchivoHeader hTrans = leerHeader(ARCHIVO_TRANSACCION);
+    Transaccion t;
+    for (int i = 0; i < hTrans.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Transaccion>(ARCHIVO_TRANSACCION, i, t) && !t.eliminado) {
+            if (strcmp(t.tipo, "VENTA") == 0) {
+                if (buscarIndiceFisicoPorId<Cliente>(ARCHIVO_CLIENTE, t.idCliente) == -1) {
+                    cout << "  [ERROR] Transaccion ID:" << t.id << " -> cliente ID:" << t.idCliente << " NO EXISTE." << endl;
+                    erroresTrans++;
+                }
+            } else {
+                if (buscarIndiceFisicoPorId<Proveedor>(ARCHIVO_PROVEEDOR, t.idProveedor) == -1) {
+                    cout << "  [ERROR] Transaccion ID:" << t.id << " -> proveedor ID:" << t.idProveedor << " NO EXISTE." << endl;
+                    erroresTrans++;
+                }
+            }
+            for (int j = 0; j < t.cantidadItems; j++) {
+                if (buscarIndiceFisicoPorId<Producto>(ARCHIVO_PRODUCTO, t.items[j].idProducto) == -1) {
+                    cout << "  [ERROR] Transaccion ID:" << t.id << " item " << j+1
+                         << " -> producto ID:" << t.items[j].idProducto << " NO EXISTE." << endl;
+                    erroresTrans++;
+                }
+            }
+        }
+    }
+    if (erroresTrans == 0) cout << "  OK - Todas las transacciones tienen referencias validas." << endl;
+
+    imprimirLinea();
+    int totalErrores = errores + erroresTrans;
+    if (totalErrores == 0) {
+        cout << "RESULTADO: Base de datos SALUDABLE. No se encontraron errores." << endl;
+    } else {
+        cout << "RESULTADO: Se encontraron " << totalErrores << " referencia(s) rota(s)." << endl;
+    }
+    imprimirLinea(70, '=');
+}
+
+bool copiarArchivo(const char* origen, const char* destino) {
+    fstream src(origen, ios::in | ios::binary);
+    if (!src.is_open()) return false;
+
+    fstream dst(destino, ios::out | ios::binary);
+    if (!dst.is_open()) {
+        src.close();
+        return false;
+    }
+
+    char buffer[4096];
+    while (src.read(buffer, sizeof(buffer))) {
+        dst.write(buffer, src.gcount());
+    }
+    if (src.gcount() > 0) dst.write(buffer, src.gcount());
+
+    src.close();
+    dst.close();
+    return true;
+}
+
+void crearBackup() {
+    limpiarPantalla();
+    cout << "=== CREAR BACKUP ===" << endl;
+
+    time_t t = time(nullptr);
+    tm* lt = localtime(&t);
+    char prefijo[30];
+    strftime(prefijo, sizeof(prefijo), "backup_%Y%m%d_%H%M%S_", lt);
+
+    const char* archivos[] = {
+        ARCHIVO_TIENDA, ARCHIVO_PRODUCTO, ARCHIVO_PROVEEDOR,
+        ARCHIVO_CLIENTE, ARCHIVO_TRANSACCION
+    };
+    const int numArchivos = 5;
+
+    int exitosos = 0;
+    for (int i = 0; i < numArchivos; i++) {
+        char destino[100];
+        strcpy(destino, prefijo);
+        strcat(destino, archivos[i]);
+
+        cout << "  Copiando " << archivos[i] << " -> " << destino << " ... ";
+        if (copiarArchivo(archivos[i], destino)) {
+            cout << "OK" << endl;
+            exitosos++;
+        } else {
+            cout << "FALLO" << endl;
+        }
+    }
+
+    imprimirLinea();
+    cout << "Backup completado: " << exitosos << "/" << numArchivos << " archivos copiados." << endl;
+}
+
+void reporteStockCritico() {
+    limpiarPantalla();
+    imprimirLinea(70, '=');
+    cout << "          REPORTE: PRODUCTOS CON STOCK CRITICO" << endl;
+    imprimirLinea(70, '=');
+    cout << "(Productos donde stock actual <= stock minimo)" << endl;
+    imprimirLinea();
+
+    ArchivoHeader h = leerHeader(ARCHIVO_PRODUCTO);
+    Producto p;
+    int encontrados = 0;
+
+    for (int i = 0; i < h.cantidadRegistros; i++) {
+        if (leerRegistroPorIndice<Producto>(ARCHIVO_PRODUCTO, i, p) && !p.eliminado) {
+            if (p.stock <= p.stockMinimo) {
+                printf("ID: %-3d | %-25s | Stock: %-5d | Minimo: %-5d | Deficit: %d\n",
+                       p.id, p.nombre, p.stock, p.stockMinimo,
+                       p.stockMinimo - p.stock);
+                mostrarInfoProveedor(p.idProveedor);
+                encontrados++;
+            }
+        }
+    }
+
+    imprimirLinea();
+    if (encontrados == 0)
+        cout << "No hay productos con stock critico." << endl;
+    else
+        cout << "Total de productos en estado critico: " << encontrados << endl;
+}
+
+void reporteResumenGeneral() {
+    limpiarPantalla();
+    imprimirLinea(70, '=');
+    cout << "              RESUMEN GENERAL DEL SISTEMA" << endl;
+    imprimirLinea(70, '=');
+
+    Tienda t;
+    if (leerTienda(t)) {
+        mostrarTienda(t);
+    } else {
+        ArchivoHeader hProd  = leerHeader(ARCHIVO_PRODUCTO);
+        ArchivoHeader hProv  = leerHeader(ARCHIVO_PROVEEDOR);
+        ArchivoHeader hCli   = leerHeader(ARCHIVO_CLIENTE);
+        ArchivoHeader hTrans = leerHeader(ARCHIVO_TRANSACCION);
+
+        cout << "Productos:     " << hProd.registrosActivos
+             << " activos / " << hProd.cantidadRegistros << " totales" << endl;
+        cout << "Proveedores:   " << hProv.registrosActivos
+             << " activos / " << hProv.cantidadRegistros << " totales" << endl;
+        cout << "Clientes:      " << hCli.registrosActivos
+             << " activos / " << hCli.cantidadRegistros << " totales" << endl;
+        cout << "Transacciones: " << hTrans.registrosActivos
+             << " activas / " << hTrans.cantidadRegistros << " totales" << endl;
+    }
+    imprimirLinea(70, '=');
+}
+
+void menuReportes() {
+    int op;
+    do {
+        limpiarPantalla();
+        imprimirLinea(70, '=');
+        cout << "               REPORTES Y MANTENIMIENTO" << endl;
+        imprimirLinea(70, '=');
+        cout << "1. Resumen general del sistema" << endl;
+        cout << "2. Productos con stock critico" << endl;
+        cout << "3. Verificar integridad referencial" << endl;
+        cout << "4. Crear backup de archivos" << endl;
+        cout << "0. Volver" << endl;
+        imprimirLinea();
+        cout << "Opcion: ";
+        cin >> op; limpiarBuffer();
+
+        switch(op) {
+            case 1: reporteResumenGeneral(); break;
+            case 2: reporteStockCritico(); break;
+            case 3: verificarIntegridadReferencial(); break;
+            case 4: crearBackup(); break;
+            case 0: break;
+            default: cout << "Opcion invalida.\n";
+        }
+        if (op != 0) pausar();
+    } while(op != 0);
+}
