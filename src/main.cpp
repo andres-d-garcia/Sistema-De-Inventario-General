@@ -2017,3 +2017,22 @@ void menuPrincipal() {
         }
     } while(op != 0);
 }
+
+// --- Main ---
+
+int main() {
+    setlocale(LC_ALL, "");
+
+    if (!inicializarSistema()) {
+        cout << "ERROR CRITICO: No se pudo inicializar el sistema de archivos." << endl;
+        return 1;
+    }
+
+    if (!tiendaExiste()) {
+        cout << "Bienvenido al sistema. Configure su tienda antes de continuar." << endl;
+        configurarTienda();
+    }
+
+    menuPrincipal();
+    return 0;
+}
