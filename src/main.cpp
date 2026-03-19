@@ -28,6 +28,7 @@ struct ArchivoHeader {
 };
  
 struct Tienda {
+    int  id;
     char nombre[100];
     char rif[20];
     char direccion[200];
