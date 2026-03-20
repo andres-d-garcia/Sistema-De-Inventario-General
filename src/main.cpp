@@ -8,7 +8,24 @@
 #include <iomanip>
 #include <sys/stat.h>
 #include <direct.h>
+#include <windows.h>
 using namespace std;
+ 
+HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+ 
+void setColor(int color) {
+    SetConsoleTextAttribute(hConsole, color);
+}
+ 
+#define RESET 7
+#define RED 12
+#define GREEN 10
+#define BLUE 9
+#define YELLOW 14
+#define CYAN 11
+#define MAGENTA 13
+#define WHITE 15
+#define GRAY 8
  
 const char* ARCHIVO_TIENDA = "tienda.bin";
 const char* ARCHIVO_PRODUCTO = "productos.bin";
@@ -28,6 +45,7 @@ struct ArchivoHeader {
 };
  
 struct Tienda {
+    int  id;
     char nombre[100];
     char rif[20];
     char direccion[200];
@@ -172,7 +190,9 @@ bool inicializarArchivo(const char* nombreArchivo) {
  
     fstream archivo(nombreArchivo, ios::out | ios::binary);
     if (!archivo.is_open()) {
+        setColor(RED);
         cout << "ERROR: No se pudo crear el archivo " << nombreArchivo << endl;
+        setColor(RESET);
         return false;
     }
  
@@ -398,8 +418,8 @@ bool validarEmail(const char* email) {
  
 bool validarRIF(const char* rif) {
     int len = strlen(rif);
-    if (len != 13) {
-        cout << "ERROR: RIF debe tener formato: T-12345678-V (13 caracteres)." << endl;
+    if (len != 12) {
+        cout << "ERROR: RIF debe tener formato: J-12345678-2 (12 caracteres)." << endl;
         return false;
     }
     char tipo = toupper(rif[0]);
@@ -418,7 +438,7 @@ bool validarRIF(const char* rif) {
             return false;
         }
     }
-    char verificador = toupper(rif[12]);
+    char verificador = toupper(rif[11]);
     if (!isdigit(verificador) && verificador != 'K') {
         cout << "ERROR: Digito verificador debe ser un numero (0-9) o la letra K." << endl;
         return false;
@@ -574,6 +594,7 @@ void configurarTienda() {
     } else {
         memset(&t, 0, sizeof(Tienda));
         cout << "=== CONFIGURACION INICIAL DE LA TIENDA ===" << endl;
+        cout << "Ingresa 'cancelar' para cancelar la operacion." << endl;
     }
  
     if (!validarChar("Nombre de la tienda: ", t.nombre, 100)) return;
@@ -650,6 +671,7 @@ void crearProducto() {
     }
  
     cout << "=== REGISTRAR NUEVO PRODUCTO ===" << endl;
+    cout << "Ingresa 'cancelar' para cancelar la operacion." << endl;
  
     Producto p;
     memset(&p, 0, sizeof(Producto));
@@ -762,7 +784,7 @@ void actualizarProducto() {
         cout << "4. Proveedor 5. Precio    6. Stock" << endl;
         cout << "7. Stock Minimo 8. Ajustar Stock 9. Guardar" << endl;
         cout << "0. Cancelar" << endl;
-        cout << "Opcion: ";
+        cout << "Ingresa una opcion: ";
         cin >> op; limpiarBuffer();
  
         char temp[200];
@@ -855,8 +877,11 @@ void menuProductos() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         cout << "            GESTION DE PRODUCTOS" << endl;
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Nuevo producto" << endl;
         cout << "2. Listar productos" << endl;
         cout << "3. Buscar por ID" << endl;
@@ -864,8 +889,11 @@ void menuProductos() {
         cout << "5. Actualizar producto" << endl;
         cout << "6. Eliminar producto" << endl;
         cout << "0. Volver" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
  
         switch(op) {
@@ -920,6 +948,7 @@ void listarProveedores() {
 void crearProveedor() {
     limpiarPantalla();
     cout << "=== REGISTRAR NUEVO PROVEEDOR ===" << endl;
+    cout << "Ingresa 'cancelar' para cancelar la operacion." << endl;
 
     Proveedor p;
     memset(&p, 0, sizeof(Proveedor)); // Inicializar todo en 0 para que se evite basura en campos no asignados
@@ -1015,7 +1044,7 @@ void actualizarProveedor() {
         cout << "3. Telefono     4. Email" << endl;
         cout << "5. Identificacion  9. Guardar" << endl;
         cout << "0. Cancelar" << endl;
-        cout << "Opcion: ";
+        cout << "Ingresa una opcion: ";
         cin >> op; limpiarBuffer();
 
         char temp[200];
@@ -1091,8 +1120,11 @@ void menuProveedores() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         cout << "           GESTION DE PROVEEDORES" << endl;
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Nuevo proveedor" << endl;
         cout << "2. Listar proveedores" << endl;
         cout << "3. Buscar por ID" << endl;
@@ -1100,8 +1132,11 @@ void menuProveedores() {
         cout << "5. Actualizar proveedor" << endl;
         cout << "6. Eliminar proveedor" << endl;
         cout << "0. Volver" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
 
         switch(op) {
@@ -1157,6 +1192,7 @@ void listarClientes() {
 void crearCliente(){
      limpiarPantalla();
     cout << "=== REGISTRAR NUEVO CLIENTE ===" << endl;
+    cout << "Ingresa 'cancelar' para cancelar la operacion." << endl;
 
     Cliente c;
     memset(&c, 0, sizeof(Cliente));
@@ -1253,7 +1289,7 @@ void actualizarCliente() {
         cout << "3. Telefono  4. Email" << endl;
         cout << "5. Cedula    9. Guardar" << endl;
         cout << "0. Cancelar" << endl;
-        cout << "Opcion: ";
+        cout << "Ingresa una opcion: ";
         cin >> op; limpiarBuffer();
 
         char temp[200];
@@ -1329,8 +1365,11 @@ void menuClientes() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         cout << "             GESTION DE CLIENTES" << endl;
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Nuevo cliente" << endl;
         cout << "2. Listar clientes" << endl;
         cout << "3. Buscar por ID" << endl;
@@ -1338,8 +1377,11 @@ void menuClientes() {
         cout << "5. Actualizar cliente" << endl;
         cout << "6. Eliminar cliente" << endl;
         cout << "0. Volver" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
 
         switch(op) {
@@ -1748,8 +1790,11 @@ void menuTransacciones() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         cout << "           GESTION DE TRANSACCIONES" << endl;
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Registrar venta" << endl;
         cout << "2. Registrar compra" << endl;
         cout << "3. Listar transacciones" << endl;
@@ -1757,8 +1802,11 @@ void menuTransacciones() {
         cout << "5. Historial de cliente" << endl;
         cout << "6. Cancelar transaccion" << endl;
         cout << "0. Volver" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
 
         switch(op) {
@@ -1955,15 +2003,21 @@ void menuReportes() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         cout << "               REPORTES Y MANTENIMIENTO" << endl;
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Resumen general del sistema" << endl;
         cout << "2. Productos con stock critico" << endl;
         cout << "3. Verificar integridad referencial" << endl;
         cout << "4. Crear backup de archivos" << endl;
         cout << "0. Volver" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
 
         switch(op) {
@@ -1987,13 +2041,16 @@ void menuPrincipal() {
     do {
         limpiarPantalla();
         imprimirLinea(70, '=');
+        setColor(CYAN);
         if (hayTienda) {
             cout << "   SISTEMA DE INVENTARIO | " << tda.nombre
                  << " | RIF: " << tda.rif << endl;
         } else {
             cout << "   SISTEMA DE INVENTARIO" << endl;
         }
+        setColor(RESET);
         imprimirLinea(70, '=');
+        setColor(WHITE);
         cout << "1. Gestion de Productos" << endl;
         cout << "2. Gestion de Proveedores" << endl;
         cout << "3. Gestion de Clientes" << endl;
@@ -2001,8 +2058,11 @@ void menuPrincipal() {
         cout << "5. Reportes y Mantenimiento" << endl;
         cout << "6. Configurar Tienda" << endl;
         cout << "0. Salir" << endl;
+        setColor(RESET);
         imprimirLinea();
-        cout << "Opcion: ";
+        setColor(YELLOW);
+        cout << "Ingresa una opcion: ";
+        setColor(RESET);
         cin >> op; limpiarBuffer();
 
         switch(op) {
