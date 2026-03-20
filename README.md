@@ -93,25 +93,25 @@ Para cancelar cualquier operación de ingreso de datos, escriba `cancelar`.
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Estructura del Código</strong></div></h1>
 
 ### Organización por Secciones
-SECCIÓN 1:  CONSTANTES Y NOMBRES DE ARCHIVOS
-SECCIÓN 2:  ESTRUCTURAS BINARIAS
-SECCIÓN 3:  UTILIDADES GENERALES
-SECCIÓN 4:  GESTIÓN DE ARCHIVOS - HEADERS Y OFFSETS
-SECCIÓN 5:  OPERACIONES CRUD GENÉRICAS
-SECCIÓN 6:  VALIDACIONES DE ENTRADA
-SECCIÓN 7:  VALIDACIONES DE UNICIDAD
-SECCIÓN 8:  TIENDA (registro único)
-SECCIÓN 9:  FUNCIONES DE PRODUCTO (MOSTRAR)
-SECCIÓN 10: CRUD DE PRODUCTOS
-SECCIÓN 11: FUNCIONES DE PROVEEDOR (MOSTRAR)
-SECCIÓN 12: CRUD DE PROVEEDORES
-SECCIÓN 13: FUNCIONES DE CLIENTE (MOSTRAR)
-SECCIÓN 14: CRUD DE CLIENTES
-SECCIÓN 15: FUNCIONES DE TRANSACCIÓN (MOSTRAR)
-SECCIÓN 16: CRUD DE TRANSACCIONES
-SECCIÓN 17: REPORTES Y MANTENIMIENTO
-SECCIÓN 18: MENÚ PRINCIPAL
-SECCIÓN 19: MAIN
+- SECCIÓN 1:  CONSTANTES Y NOMBRES DE ARCHIVOS
+- SECCIÓN 2:  ESTRUCTURAS BINARIAS
+- SECCIÓN 3:  UTILIDADES GENERALES
+- SECCIÓN 4:  GESTIÓN DE ARCHIVOS - HEADERS Y OFFSETS
+- SECCIÓN 5:  OPERACIONES CRUD GENÉRICAS
+- SECCIÓN 6:  VALIDACIONES DE ENTRADA
+- SECCIÓN 7:  VALIDACIONES DE UNICIDAD
+- SECCIÓN 8:  TIENDA (registro único)
+- SECCIÓN 9:  FUNCIONES DE PRODUCTO (MOSTRAR)
+- SECCIÓN 10: CRUD DE PRODUCTOS
+- SECCIÓN 11: FUNCIONES DE PROVEEDOR (MOSTRAR)
+- SECCIÓN 12: CRUD DE PROVEEDORES
+- SECCIÓN 13: FUNCIONES DE CLIENTE (MOSTRAR)
+- SECCIÓN 14: CRUD DE CLIENTES
+- SECCIÓN 15: FUNCIONES DE TRANSACCIÓN (MOSTRAR)
+- SECCIÓN 16: CRUD DE TRANSACCIONES
+- SECCIÓN 17: REPORTES Y MANTENIMIENTO
+- SECCIÓN 18: MENÚ PRINCIPAL
+- SECCIÓN 19: MAIN
 
 ### Estructuras Principales (Tamaño Fijo)
 
@@ -248,41 +248,13 @@ Las relaciones 1:N se implementan mediante arrays fijos de IDs:
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Diagrama de Clases (Estructuras)</strong></div></h1> 
 
-┌─────────────────┐      ┌─────────────────┐
-│    Producto     │      │   Proveedor     │
-├─────────────────┤      ├─────────────────┤
-│ id              │      │ id              │
-│ codigo[20]      │      │ nombre[100]     │
-│ nombre[100]     │      │ direccion[200]  │
-│ descripcion[200]│      │ telefono[20]    │
-│ precio          │      │ email[100]      │
-│ stock           │◄─────┤ identificacion  │
-│ idProveedor     │      │ productosIDs[]  │
-│ stockMinimo     │      │ cantidadProductos│
-│ totalVendidos   │      └─────────────────┘
-│ eliminado       │             ▲
-└─────────────────┘             │
-        ▲                       │
-        │                       │
-┌───────┴───────┐      ┌────────┴────────┐
-│  Transaccion  │      │     Cliente     │
-├───────────────┤      ├─────────────────┤
-│ id            │      │ id              │
-│ tipo[10]      │      │ nombre[100]     │
-│ idCliente     │─────►│ direccion[200]  │
-│ idProveedor   │      │ telefono[20]    │
-│ items[]       │      │ email[100]      │
-│ cantidadItems │      │ identificacion  │
-│ total         │      │ comprasIDs[]    │
-│ fecha[11]     │      │ cantidadCompras │
-│ eliminado     │      │ totalGastado    │
-└───────────────┘      └─────────────────┘
+<img src= "https://media.discordapp.net/attachments/1137458996404572283/1484361119463243796/image.png?ex=69bdf284&is=69bca104&hm=62c293a4e2aad861e5cad3e08ae8f74eeb3ab6b71f52c10652cb938659228db1&=&format=webp&quality=lossless&width=406&height=623" width="250">
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Manual de Usuario Rápido</strong></div></h1> 
 
-==========================================================
-   SISTEMA DE INVENTARIO | NOMBRE_TIENDA | RIF: J-XXXXXXXX-X
-==========================================================
+#### ==========================================================
+###   SISTEMA DE INVENTARIO | NOMBRE_TIENDA | RIF: J-XXXXXXXX-X
+#### ==========================================================
 1. Gestión de Productos
 2. Gestión de Proveedores
 3. Gestión de Clientes
@@ -290,7 +262,7 @@ Las relaciones 1:N se implementan mediante arrays fijos de IDs:
 5. Reportes y Mantenimiento
 6. Configurar Tienda
 0. Salir
-==========================================================
+#### ==========================================================
 Opcion: 
 
 ### Gestión de Productos
