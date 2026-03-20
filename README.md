@@ -6,9 +6,23 @@ Sistema integral de gestión para tiendas desarrollado en C++ que permite admini
 - Productos
 - Proveedores
 - Clientes
-- Transacciones (compras y ventas)
+- Transacciones (compras y ventas con múltiples productos)
 
-El sistema implementa un menú interactivo con operaciones CRUD (Crear, Leer, Actualizar, Eliminar) para cada entidad, además de funcionalidades específicas como búsqueda por múltiples criterios, gestión de inventario y registro de transacciones con actualización automática de stock.
+### Filosofía de Diseño
+
+**A diferencia de la versión anterior (Proyecto 1), esta implementación NO carga todos los datos en memoria RAM.** Los datos residen permanentemente en disco mediante **archivos binarios**, y solo se carga **UN registro a la vez** en memoria cuando es necesario procesarlo.
+
+### Características Principales
+
+- **Persistencia con archivos binarios**: 5 archivos independientes (tienda, productos, proveedores, clientes, transacciones)
+- **Acceso aleatorio**: Cálculo de offsets con `sizeof(Header) + (indice * sizeof(Struct))`
+- **Headers de archivo**: Metadata administrativa (cantidad de registros, próximo ID, registros activos)
+- **Borrado lógico**: Flag `eliminado` que mantiene las posiciones físicas intactas
+- **Transacciones con múltiples productos**: Hasta 10 productos por transacción
+- **Integridad referencial**: Verificación de relaciones entre entidades
+- **Backup automático**: Copia de seguridad con timestamp
+- **Menú interactivo** con operaciones CRUD completas
+
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Instrucciones de Compilación</strong></div></h1> 
 
@@ -56,157 +70,279 @@ make
 ```bash
 tienda.exe
 ```
+### Primera Ejecución
+Al iniciar el sistema por primera vez, se crearán automáticamente los archivos binarios:
+
+- `tienda.bin`
+
+- `productos.bin`
+
+- `proveedores.bin`
+
+- `clientes.bin`
+
+- `transacciones.bin`
+
+Se solicitará la configuración inicial de la tienda (nombre, RIF, dirección, teléfono, email).
 
 ### Navegación por el menú
 El sistema utiliza un menú jerárquico. Seleccione la opción deseada ingresando el número correspondiente y presione Enter.
 
 Para cancelar cualquier operación de ingreso de datos, escriba `cancelar`.
 
-<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Estructura del Código</strong></div></h1> 
+<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Estructura del Código</strong></div></h1>
 
-### Estructuras Principales
-```
-├── Producto          # Almacena información de productos
-├── Proveedor         # Datos de proveedores
-├── Cliente           # Datos de clientes  
-├── Transaccion       # Registro de compras/ventas
-├── Tienda            # Estructura principal que contiene todos los arrays
-└── Cambios*          # Estructuras para control de cambios (Producto/Proveedor/Cliente)
-```
+### Organización por Secciones
+SECCIÓN 1:  CONSTANTES Y NOMBRES DE ARCHIVOS
+SECCIÓN 2:  ESTRUCTURAS BINARIAS
+SECCIÓN 3:  UTILIDADES GENERALES
+SECCIÓN 4:  GESTIÓN DE ARCHIVOS - HEADERS Y OFFSETS
+SECCIÓN 5:  OPERACIONES CRUD GENÉRICAS
+SECCIÓN 6:  VALIDACIONES DE ENTRADA
+SECCIÓN 7:  VALIDACIONES DE UNICIDAD
+SECCIÓN 8:  TIENDA (registro único)
+SECCIÓN 9:  FUNCIONES DE PRODUCTO (MOSTRAR)
+SECCIÓN 10: CRUD DE PRODUCTOS
+SECCIÓN 11: FUNCIONES DE PROVEEDOR (MOSTRAR)
+SECCIÓN 12: CRUD DE PROVEEDORES
+SECCIÓN 13: FUNCIONES DE CLIENTE (MOSTRAR)
+SECCIÓN 14: CRUD DE CLIENTES
+SECCIÓN 15: FUNCIONES DE TRANSACCIÓN (MOSTRAR)
+SECCIÓN 16: CRUD DE TRANSACCIONES
+SECCIÓN 17: REPORTES Y MANTENIMIENTO
+SECCIÓN 18: MENÚ PRINCIPAL
+SECCIÓN 19: MAIN
 
-### Funciones por Módulo
+### Estructuras Principales (Tamaño Fijo)
 
-#### Utilidades
-- `limpiarPantalla()` - Limpia la consola
-- `limpiarBuffer()` - Limpia el buffer de entrada
-- Funciones de validación (`validarChar`, `validarInt`, `validarFloat`, `validarEmail`, `validarFecha`)
+| Estructura | Tamaño aprox. | Descripción |
+|------------|---------------|-------------|
+| `ArchivoHeader` | 16 bytes | Metadata de cada archivo |
+| `Tienda` | ~160 bytes | Datos de la empresa y estadísticas |
+| `Producto` | ~376 bytes | Información de productos |
+| `Proveedor` | ~860 bytes | Datos de proveedores + relaciones |
+| `Cliente` | ~900 bytes | Datos de clientes + historial |
+| `ItemTransaccion` | 20 bytes | Línea de detalle de transacción |
+| `Transaccion` | ~500 bytes | Transacción con múltiples productos |
 
-#### Gestión de Memoria
-- `inicializarTienda()` - Inicializa la estructura Tienda con arrays dinámicos
-- `liberarTienda()` - Libera la memoria asignada
-- `redimensionarArray*()` - Redimensiona arrays cuando se llenan
 
-#### CRUD Productos
-- `crearProducto()`
-- `listarProductos()`
-- `buscarProducto()` (por ID, nombre, código, proveedor)
-- `actualizarProducto()` (con sistema de cambios pendientes)
-- `eliminarProducto()`
+### Funciones Genéricas (Templates)
+template<typename T>
+int escribirRegistroAlFinal(const char* archivo, T& registro);
 
-#### CRUD Proveedores
-- `crearProveedor()`
-- `listarProveedores()`
-- `buscarProveedor()` (por ID, nombre, identificación)
-- `actualizarProveedor()`
-- `eliminarProveedor()`
+template<typename T>
+bool leerRegistroPorIndice(const char* archivo, int indice, T& destino);
 
-#### CRUD Clientes
-- `crearCliente()`
-- `listarClientes()`
-- `buscarCliente()` (por ID, nombre, identificación)
-- `actualizarCliente()`
-- `eliminarCliente()`
+template<typename T>
+int buscarIndiceFisicoPorId(const char* archivo, int idBuscado);
 
-#### Transacciones
-- `registrarCompra()` - Compra a proveedor (aumenta stock)
-- `registrarVenta()` - Venta a cliente (disminuye stock)
-- `cancelarTransaccion()` - Anula transacción (revierte efecto en stock)
-- `buscarTransaccion()` (por ID, producto, cliente, proveedor, fecha, tipo)
-- `listarTransacciones()`
+template<typename T>
+bool borradoLogico(const char* archivo, int indiceFisico);
 
-#### Menús
-- `menuPrincipal()`
-- `menuGestionProductos()`
-- `menuGestionProveedores()`
-- `menuGestionClientes()`
-- `menuGestionTransacciones()`
-- `menuBuscarTransaccion()`
+### Cálculo de Offsets (Acceso Aleatorio)
+template<typename T>
+long calcularOffset(int indiceFisico) {
+    return (long)sizeof(ArchivoHeader) + (long)(indiceFisico * sizeof(T));
+}
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Funcionalidades Implementadas</strong></div></h1>
 
 ### Gestión de Productos ✓
-- Crear producto con código único, nombre, descripción, proveedor, precio y stock
-- Listar todos los productos
-- Buscar por ID, nombre (parcial), código (parcial) o proveedor
-- Actualizar producto con sistema de cambios pendientes
+- Crear producto con código único, nombre, descripción, proveedor, precio, stock y stock mínimo
+- Validación de existencia de proveedor antes de crear
+- Listar productos con información del proveedor (nombre, RIF, teléfono)
+- Buscar por ID o nombre (coincidencia parcial)
+- Actualizar producto (código, nombre, descripción, proveedor, precio, stock, stock mínimo)
 - Ajuste de stock (sumar/restar) sin sobrescribir
-- Eliminar producto
+- Eliminar producto (borrado lógico con flag `eliminado`)
 
 ### Gestión de Proveedores ✓
-- Registrar proveedor con formato RIF (J-12345678-9)
-- Identificación única
-- Listar, buscar y actualizar proveedores
+- Registrar proveedor con validación de RIF (formato J-12345678-9)
+- Identificación única (no duplicados)
+- Listar proveedores con cantidad de productos asociados
+- Buscar por ID o nombre
+- Actualizar proveedor (nombre, dirección, teléfono, email, RIF)
 - Eliminar proveedor con verificación de productos asociados
 
 ### Gestión de Clientes ✓
-- Registrar cliente con formato de cédula (V-12345678 o E-12345678)
+- Registrar cliente con validación de cédula (V-12345678 o E-12345678)
 - Identificación única
-- Listar, buscar y actualizar clientes
+- Listar clientes con total gastado
+- Buscar por ID o nombre
+- Actualizar cliente
 - Eliminar cliente con verificación de transacciones asociadas
 
 ### Gestión de Transacciones ✓
-- Registrar compras a proveedores (aumenta stock)
-- Registrar ventas a clientes (disminuye stock)
-- Validación de stock disponible para ventas
-- Cancelación de transacciones (revierte efecto en stock)
-- Búsqueda por múltiples criterios (ID, producto, cliente, proveedor, fecha, tipo)
-- Listado completo de transacciones
+- **Ventas**: Registrar ventas a clientes con múltiples productos
+  - Validación de stock disponible antes de procesar
+  - Precio configurable (usar precio del producto o ingresar otro)
+  - Actualización automática de stock y estadísticas del cliente
+- **Compras**: Registrar compras a proveedores con múltiples productos
+  - Aumento automático de stock
+  - Precio de compra independiente del precio de venta
+- **Cancelación**: Anular transacciones (revierte efecto en stock y estadísticas)
+- **Listado**: Visualización formateada con información de contraparte
+- **Historial de cliente**: Todas las compras de un cliente específico
+
+### Reportes y Mantenimiento ✓
+- **Resumen general**: Estadísticas de todas las entidades
+- **Stock crítico**: Productos con stock ≤ stock mínimo
+- **Integridad referencial**: Verificación de relaciones entre archivos
+  - Productos → Proveedores
+  - Transacciones → Clientes/Proveedores
+  - Transacciones → Productos
+- **Backup**: Copia de seguridad de todos los archivos .bin con timestamp
 
 ### Validaciones ✓
-- Entradas de usuario robustas
-- Validación de formatos (email, fechas, identificaciones)
+- Entradas de usuario robustas con `limpiarBuffer()`
+- Validación de formatos:
+  - Email (usuario@dominio.extension)
+  - RIF (J-12345678-9)
+  - Cédula (V-12345678 o E-12345678)
+  - Fechas (YYYY-MM-DD)
 - Unicidad de códigos e identificaciones
 - Prevención de inyección de buffer
 - Opción "cancelar" en todas las entradas
 
-### Gestión de Memoria Dinámica ✓
-- Arrays redimensionables
-- Liberación de memoria al finalizar
+### Persistencia y Acceso a Datos ✓
+- **Headers de archivo**: Metadata para acceso rápido
+- **Borrado lógico**: Los registros eliminados mantienen su posición
+- **IDs autoincrementales**: Por archivo, gestionados en el header
+- **Relaciones**: Arrays fijos de IDs para relaciones 1:N
+- **Estadísticas globales**: Actualización automática en Tienda
 
-<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Casos de Prueba Ejecutados</strong></div></h1> 
+<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Arquitectura de Archivos Binarios</strong></div></h1> 
 
-### Caso 1: Creación de Entidades
+### Estructura de Cada Archivo
+[HEADER: 16 bytes] → ArchivoHeader (cantidadRegistros, proximoId, registrosActivos, version)
+[REGISTRO 0]       → sizeof(Struct) bytes
+[REGISTRO 1]       → sizeof(Struct) bytes
+...
+[REGISTRO N]       → sizeof(Struct) bytes
 
-![caso](https://cdn.discordapp.com/attachments/1466517733909729312/1475971176097382421/image.png?ex=69a20fc6&is=69a0be46&hm=d010a2c5d8129a56b5187388a0e08cfeef0a9560aaddc717062f02238d360cda&)
-![caso](https://cdn.discordapp.com/attachments/1466517733909729312/1475971978220404871/Screenshot_2026-02-24_174427.png?ex=69a21085&is=69a0bf05&hm=b4195b91169f121b2af43441812e8d8499b6463678fbd8a3e85364d9d994ce51&)
-![caso](https://cdn.discordapp.com/attachments/1466517733909729312/1475975504044621844/image.png?ex=69a213ce&is=69a0c24e&hm=b178882cde1eef21a3053fbf6f77f61fef9348db55219892382431d049aba4ce&)
-![caso](https://cdn.discordapp.com/attachments/1466517733909729312/1475975803656470618/image.png?ex=69a21415&is=69a0c295&hm=a857fcf29198775981e8e46b550e3321a14e6b9742f995ad3697e3f3068a5fae&)
+### Cálculo de Posiciones
+Para acceder al registro en la posición física `i`:
 
+offset = sizeof(ArchivoHeader) + (i * sizeof(Struct))
 
-### Caso 2: Validación de Unicidad
+### Borrado Lógico
 
-![caso2](https://cdn.discordapp.com/attachments/1466517733909729312/1475982310691049484/image.png?ex=69a21a25&is=69a0c8a5&hm=adb1ca33955ef9dadf171fc0b9a1f1a0d35e599193c10f15e3b8add24ea58ba6&)
-![caso2](https://cdn.discordapp.com/attachments/1466517733909729312/1475982545890840857/image.png?ex=69a21a5d&is=69a0c8dd&hm=a7e2ab1eefe0bfd1e353fcc96ac9171c5e4953a70e527e30555c8a7f3c5ec757&)
+Los registros no se eliminan físicamente del archivo. Se marca `eliminado = true` y se actualiza el contador `registrosActivos` en el header. Esto mantiene todas las posiciones físicas intactas y permite cálculos de offset consistentes.
 
+### IDs Auto-incrementales
 
-### Caso 3: Búsqueda
+Cada archivo mantiene su propio contador de IDs en el header (`proximoId`). Al crear un nuevo registro:
 
-![caso3](https://cdn.discordapp.com/attachments/1466517733909729312/1475987659502391376/image.png?ex=69a17660&is=69a024e0&hm=f87ac8a4cd5e7f0b9234b6ef500ce5ea7a52c7d57a1ca2386ec0c4a0c7ff5e51&)
-![caso3](https://cdn.discordapp.com/attachments/1466517733909729312/1475990052902273147/image.png?ex=69a1789b&is=69a0271b&hm=0e6a648a7f35600d70b803f3d17a6e17a65cc556c826e3e94283777653bc1077&)
-![caso3](https://cdn.discordapp.com/attachments/1466517733909729312/1476000799124488336/image.png?ex=69a1829d&is=69a0311d&hm=9d8edd0c452700e26cd14cf9bdcbba868a8a9347e7cad95ec3982675afcb2b1e&)
+1. Se lee el header para obtener `proximoId`
+2. Se asigna ese ID al nuevo registro
+3. Se incrementa `proximoId` en el header
+4. Se guarda el header actualizado
 
+### Relaciones entre Archivos
 
-### Caso 4: Actualización de Producto
+Las relaciones 1:N se implementan mediante arrays fijos de IDs:
 
-![caso4](https://cdn.discordapp.com/attachments/1466517733909729312/1476722416402169987/Screenshot_2026-02-26_192721.png?ex=69a2286c&is=69a0d6ec&hm=bb9a3660c3bf05f2d5e0f179137f99d18a91b3196575f3ed782dc6a59891309f&)
-![caso4](https://media.discordapp.net/attachments/1466517733909729312/1476722416884383835/Screenshot_2026-02-26_192643.png?ex=69a2286c&is=69a0d6ec&hm=a12c295f2b429eacc121293d9891545620532d698f355cff5227272e30c36a86&=&format=webp&quality=lossless&width=733&height=511)
+- **Proveedor → Productos**: `int productosIDs[MAX_PRODUCTOS_POR_PROVEEDOR]`
+- **Cliente → Transacciones**: `int comprasIDs[MAX_TRANSACCIONES_POR_ENTIDAD]`
+- **Transacción → Productos**: `ItemTransaccion items[MAX_ITEMS_POR_TRANSACCION]`
 
-### Caso 5: Transacciones
+<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Diagrama de Clases (Estructuras)</strong></div></h1> 
 
-![caso5](https://cdn.discordapp.com/attachments/1466517733909729312/1476723505570517182/image.png?ex=69a2296f&is=69a0d7ef&hm=9057c496fbf24b8f8423c1b6f7d22957fa052d437598a02e7eb3c939433a4748&)
-![caso5](https://cdn.discordapp.com/attachments/1466517733909729312/1476723889676619930/image.png?ex=69a229cb&is=69a0d84b&hm=4343b8a724607f59575a65d3d702d233e71010f3c9b326ad81181b33de4c1b84&)
-![caso5](https://cdn.discordapp.com/attachments/1466517733909729312/1476725803063709818/image.png?ex=69a22b93&is=69a0da13&hm=7b9d271233f7331e5fbe9f918fbbe5226c6c99b2be8e87c5070dbca268021615&)
-![caso5](https://cdn.discordapp.com/attachments/1466517733909729312/1476726371332915242/image.png?ex=69a22c1b&is=69a0da9b&hm=89e8c8c4deb3a2449297649bb1e840dd3fba553b52ee542dad8d87c8523178ca&)
-![caso5](https://cdn.discordapp.com/attachments/1466517733909729312/1476726399304990851/Screenshot_2026-02-26_194225.png?ex=69a22c21&is=69a0daa1&hm=b312c93eca1163e18f25af21817d2ede30c4141a6251b839238de1333b97a18b&)
+┌─────────────────┐      ┌─────────────────┐
+│    Producto     │      │   Proveedor     │
+├─────────────────┤      ├─────────────────┤
+│ id              │      │ id              │
+│ codigo[20]      │      │ nombre[100]     │
+│ nombre[100]     │      │ direccion[200]  │
+│ descripcion[200]│      │ telefono[20]    │
+│ precio          │      │ email[100]      │
+│ stock           │◄─────┤ identificacion  │
+│ idProveedor     │      │ productosIDs[]  │
+│ stockMinimo     │      │ cantidadProductos│
+│ totalVendidos   │      └─────────────────┘
+│ eliminado       │             ▲
+└─────────────────┘             │
+        ▲                       │
+        │                       │
+┌───────┴───────┐      ┌────────┴────────┐
+│  Transaccion  │      │     Cliente     │
+├───────────────┤      ├─────────────────┤
+│ id            │      │ id              │
+│ tipo[10]      │      │ nombre[100]     │
+│ idCliente     │─────►│ direccion[200]  │
+│ idProveedor   │      │ telefono[20]    │
+│ items[]       │      │ email[100]      │
+│ cantidadItems │      │ identificacion  │
+│ total         │      │ comprasIDs[]    │
+│ fecha[11]     │      │ cantidadCompras │
+│ eliminado     │      │ totalGastado    │
+└───────────────┘      └─────────────────┘
 
+<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Manual de Usuario Rápido</strong></div></h1> 
 
-### Caso 6: Validación de Stock en Ventas
+==========================================================
+   SISTEMA DE INVENTARIO | NOMBRE_TIENDA | RIF: J-XXXXXXXX-X
+==========================================================
+1. Gestión de Productos
+2. Gestión de Proveedores
+3. Gestión de Clientes
+4. Gestión de Transacciones
+5. Reportes y Mantenimiento
+6. Configurar Tienda
+0. Salir
+==========================================================
+Opcion: 
 
-![caso6](https://cdn.discordapp.com/attachments/1466517733909729312/1476727026206511316/image.png?ex=69a22cb7&is=69a0db37&hm=ce54ecd368e7f67c9a0b5d421386e95e763e0b22ed71b4f20f1e79c49634e875&)
-![caso6](https://cdn.discordapp.com/attachments/1466517733909729312/1476727499701616712/image.png?ex=69a22d28&is=69a0dba8&hm=7b5d026b1f9c3f50457462f2f8fbb79e2cebf7c4a4960b380e04e10fb2a5c613&)
+### Gestión de Productos
+- **Crear producto**: Ingresar código único, nombre, descripción, proveedor, precio, stock y stock mínimo. Valida existencia del proveedor antes de crear.
+- **Listar productos**: Muestra todos los productos con información del proveedor (nombre, RIF, teléfono) en formato tabular.
+- **Buscar producto**: Por ID (detalle completo) o por nombre (coincidencia parcial insensible a mayúsculas).
+- **Actualizar producto**: Modificar campos individualmente (código, nombre, descripción, proveedor, precio, stock, stock mínimo).
+- **Ajustar stock**: Sumar o restar cantidad sin sobrescribir el valor actual.
+- **Eliminar producto**: Borrado lógico con flag `eliminado` y confirmación del usuario.
 
+### Gestión de Proveedores
+- **Registrar proveedor**: Validación de formato RIF (J-12345678-9) y unicidad de identificación.
+- **Listar proveedores**: Muestra todos los proveedores con la cantidad de productos asociados a cada uno.
+- **Buscar proveedor**: Por ID o por nombre (coincidencia parcial).
+- **Actualizar proveedor**: Modificar nombre, dirección, teléfono, email o RIF.
+- **Eliminar proveedor**: Verificación de productos asociados antes de permitir la eliminación (borrado lógico).
 
-### Caso 7: Cancelación de Transacción con Verificación
+### Gestión de Clientes
+- **Registrar cliente**: Validación de formato de cédula (V-12345678 o E-12345678) y unicidad de identificación.
+- **Listar clientes**: Muestra todos los clientes con el total gastado en sus compras.
+- **Buscar cliente**: Por ID o por nombre (coincidencia parcial).
+- **Actualizar cliente**: Modificar datos personales del cliente.
+- **Eliminar cliente**: Verificación de transacciones asociadas antes de permitir la eliminación (borrado lógico).
+- **Historial de compras**: Visualización de todas las transacciones realizadas por un cliente específico.
 
-![caso7](https://cdn.discordapp.com/attachments/1466517733909729312/1476728023419064390/Screenshot_2026-02-26_194918.png?ex=69a22da5&is=69a0dc25&hm=4d5dd3ca75c9a5edd4e96bdeae728f208bd91782f55934f0122df95c9888dd1a&)
-![caso7](https://cdn.discordapp.com/attachments/1466517733909729312/1476728023708602471/Screenshot_2026-02-26_194910.png?ex=69a22da5&is=69a0dc25&hm=811f8abad44b2f117a7f3fc46204d38ed616e9ea22b8f6c10b390bd920bd2979&)
+### Gestión de Transacciones
+- **Registrar venta**:
+  - Selección de cliente existente
+  - Agregar hasta 10 productos por transacción
+  - Validación de stock disponible antes de procesar
+  - Precio configurable (usar precio del producto o ingresar otro)
+  - Actualización automática de stock y estadísticas del cliente
+- **Registrar compra**:
+  - Selección de proveedor existente
+  - Agregar múltiples productos con sus cantidades
+  - Precio de compra independiente del precio de venta
+  - Aumento automático de stock
+- **Cancelar transacción**:
+  - Anulación de venta o compra existente
+  - Reversión automática del efecto en stock
+  - Actualización de estadísticas del cliente/proveedor
+- **Listar transacciones**: Visualización formateada con información de la contraparte (cliente o proveedor)
+- **Buscar transacciones**: Por ID, tipo (compra/venta), fecha o entidad involucrada
+
+### Reportes y Mantenimiento
+- **Resumen general**: Estadísticas globales del sistema mostrando:
+  - Total de productos, proveedores, clientes y transacciones
+  - Valor total del inventario
+  - Total de ventas y compras realizadas
+- **Stock crítico**: Listado de productos con stock ≤ stock mínimo, alertando sobre necesidad de reabastecimiento
+- **Integridad referencial**: Verificación automática de relaciones entre archivos:
+  - Productos huerfanos (sin proveedor válido)
+  - Transacciones con clientes o proveedores inexistentes
+  - Transacciones con productos no registrados
+- **Backup**: Creación de copia de seguridad de todos los archivos .bin con timestamp en el nombre
