@@ -13,7 +13,6 @@ public:
     Proveedor(const Proveedor& otro);
     ~Proveedor();
 
-    // Getters
     int         getId()             const;
     const char* getNombre()         const;
     const char* getDireccion()      const;
@@ -25,10 +24,8 @@ public:
     time_t      getFechaRegistro()  const;
     time_t      getFechaUltimaModificacion() const;
 
-    // Obtener un ID de producto por su posicion en el arreglo interno
     int getProductoId(int posicion) const;
 
-    // Setters
     bool setId(int id);
     bool setNombre(const char* nombre);
     bool setDireccion(const char* direccion);
@@ -39,11 +36,9 @@ public:
     void setFechaRegistro(time_t fecha);
     void actualizarFechaModificacion();
 
-    // Gestion de relaciones
-    bool agregarProductoId(int idProducto);   // Retorna false si ya esta o no hay espacio
-    bool eliminarProductoId(int idProducto);  // Borra el ID del arreglo interno
+    bool agregarProductoId(int idProducto);   
+    bool eliminarProductoId(int idProducto);  
 
-    // Presentacion
     void mostrarInformacionBasica()   const;
     void mostrarInformacionCompleta() const;
 
@@ -63,4 +58,4 @@ private:
     time_t fechaUltimaModificacion;
 };
 
-#endif // PROVEEDOR_HPP
+#endif 

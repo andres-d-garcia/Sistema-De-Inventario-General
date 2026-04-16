@@ -15,10 +15,8 @@ void actualizarProducto();
 void eliminarProducto();
 void productosStockCritico();
 
-// Muestra informacion del proveedor de un producto (usado en detalle)
 void mostrarInfoProveedor(int idProveedor);
 
-// Verifica si un codigo ya existe en productos.bin (excluye idExcluir)
 bool codigoProductoExiste(const char* codigo, int idExcluir = -1);
 
-#endif // OPERACIONES_PRODUCTOS_HPP
+#endif 

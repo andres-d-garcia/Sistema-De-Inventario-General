@@ -14,13 +14,13 @@ public:
     // -------------------------------------------------------------------------
     // Constructores y destructor
     // -------------------------------------------------------------------------
-    Tienda();                        // Constructor por defecto (campos en cero)
+    Tienda();                        
     Tienda(const char* nombre,
            const char* rif,
            const char* direccion,
            const char* telefono,
-           const char* email);       // Constructor parametrizado
-    Tienda(const Tienda& otro);      // Constructor de copia
+           const char* email);       
+    Tienda(const Tienda& otro);      
     ~Tienda();
 
     // -------------------------------------------------------------------------
@@ -59,7 +59,7 @@ public:
     void setTotalCompras(float total);
     void setEliminado(bool eliminado);
     void setFechaCreacion(time_t fecha);
-    void actualizarFechaModificacion();   // Asigna time(nullptr) automaticamente
+    void actualizarFechaModificacion();   
 
     // -------------------------------------------------------------------------
     // Metodos de negocio
@@ -84,11 +84,9 @@ public:
     // -------------------------------------------------------------------------
     // Metodo estatico de utilidad
     // -------------------------------------------------------------------------
-    // Retorna sizeof(Tienda) — util para calcular offsets en GestorArchivos
     static int obtenerTamano();
 
 private:
-    // Atributos privados (equivalentes al struct del Proyecto 2)
     int   id;
     char  nombre[100];
     char  rif[20];
@@ -106,4 +104,4 @@ private:
     time_t fechaUltimaModificacion;
 };
 
-#endif // TIENDA_HPP
+#endif

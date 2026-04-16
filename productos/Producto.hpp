@@ -52,7 +52,7 @@ public:
     // -------------------------------------------------------------------------
     // Metodos de negocio
     // -------------------------------------------------------------------------
-    bool tieneStockCritico()       const;   // stock <= stockMinimo
+    bool tieneStockCritico()       const;
     bool tieneStockSuficiente(int cantidad) const;
     void vender(int cantidad);              
     void reabastecer(int cantidad);         
@@ -81,4 +81,4 @@ private:
     time_t fechaUltimaModificacion;
 };
 
-#endif // PRODUCTO_HPP
+#endif
