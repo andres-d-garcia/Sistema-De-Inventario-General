@@ -2,6 +2,120 @@
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Descripción del Proyecto</strong></div></h1>
 
+# Sistema de Inventario — Fase 3 (POO y Modularización)
+
+
+-----------------
+
+Sistema integral de gestión para tiendas desarrollado en C++ (Fase 3). Esta versión evoluciona la arquitectura previa (Fase 2) hacia un diseño modular orientado a objetos, separando responsabilidades, encapsulando entidades y centralizando la persistencia en un gestor de archivos genérico.
+
+Principales cambios (Fase 2 → Fase 3)
+-----------------------------------
+
+- Migración de `struct` a `class` con encapsulamiento: atributos privados, `getters` const, `setters` con validación, constructores (por defecto, parametrizados, copia) y destructores.
+- Modularización por dominios: cada entidad y su lógica de negocio están en su propio módulo (`tienda/`, `productos/`, `proveedores/`, `clientes/`, `transacciones/`, `persistencia/`, `interfaz/`, `utilidades/`). Cada módulo usa `.hpp` + `.cpp`.
+- Persistencia centralizada en `GestorArchivos`: operaciones genéricas de E/S implementadas mediante plantillas (templates) para evitar duplicación. Los templates se implementan en headers para que el compilador los instancie.
+- Acceso aleatorio y headers en archivos binarios: cada archivo tiene un `ArchivoHeader` con metadata (cantidad, próximoId, activos) y se calcula offset mediante `sizeof(ArchivoHeader) + indice * sizeof(T)`.
+- No se cargan todos los registros en memoria: el sistema mantiene la filosofía de acceder y procesar un registro a la vez para reducir el consumo de RAM.
+- Interfaz separada: la clase `Interfaz` centraliza menús y navegación; `main.cpp` queda mínimo y delega en `Interfaz::ejecutar()`.
+- Borrado lógico y consistencia: se mantiene el flag `eliminado` para borrados lógicos y se actualizan contadores en el header.
+- Uso de constantes y límites: `MAX_ITEMS_POR_TRANSACCION`, `MAX_PRODUCTOS_POR_PROVEEDOR`, etc., para espacios fijos y cálculo de tamaños.
+
+Estructura del proyecto
+-----------------------
+
+Raíz del repositorio (resumen):
+
+```
+main.cpp
+Makefile
+persistencia/
+  ├─ GestorArchivos.hpp
+  ├─ GestorArchivos.cpp
+  └─ Constantes.hpp
+tienda/
+  ├─ Tienda.hpp
+  └─ Tienda.cpp
+productos/
+  ├─ Producto.hpp
+  ├─ Producto.cpp
+  └─ operacionesProductos.*
+proveedores/
+clientes/
+transacciones/
+interfaz/
+utilidades/
+datos/    # generados en tiempo de ejecución
+```
+
+Persistencia y `GestorArchivos`
+--------------------------------
+
+La persistencia se centraliza en la capa `persistencia/` mediante funciones template que realizan:
+
+- escribir/leer registros por índice
+- buscar índice físico por ID
+- actualización de headers y conteos
+
+Implementar plantillas permite reutilizar la lógica para `Producto`, `Proveedor`, `Cliente`, `Transaccion` y `Tienda` sin repetir código.
+
+Compilación y ejecución
+-----------------------
+
+Makefile
+- Usar `make` en entornos Unix/MSYS. En Windows con MinGW/TDM use `mingw32-make` si `make` no está disponible.
+
+Compilación directa (ejemplo con TDM/MinGW):
+
+```bash
+g++ -std=c++11 -Wall -Wextra -g \
+  main.cpp persistencia/GestorArchivos.cpp tienda/Tienda.cpp \
+  productos/Producto.cpp productos/operacionesProductos.cpp \
+  proveedores/Proveedor.cpp proveedores/operacionesProveedores.cpp \
+  clientes/Cliente.cpp clientes/operacionesClientes.cpp \
+  transacciones/Transaccion.cpp transacciones/operacionesTransacciones.cpp \
+  interfaz/Interfaz.cpp utilidades/Validaciones.cpp utilidades/Formatos.cpp \
+  -o inventario.exe
+```
+
+Ejecución
+- En Windows: `inventario.exe`
+- En Unix/macOS: `./inventario`
+
+Notas sobre el entorno Windows
+- Si usas TDM o MinGW, asegúrate de tener `g++` en el `PATH`. Si no hay `make`, usa `mingw32-make` o compila con el comando `g++` anterior.
+
+Estado actual del repositorio
+-----------------------------
+
+- La estructura modular y las cabeceras de las clases han sido añadidas según Fase 3.
+- Se centralizó la persistencia y se definieron plantillas y constantes en `persistencia/Constantes.hpp` y `GestorArchivos.hpp` (implementación parcial según desarrollo).
+- Algunos módulos contienen implementaciones mínimas o `stubs` en `transacciones/` y otros archivos para permitir compilación y pruebas iniciales; la lógica completa de negocio puede necesitar más trabajo (ver comentarios en los archivos correspondientes).
+
+Archivo clave
+- `Makefile`: versión más portable y preparada para entornos MinGW/TDM (ver [Makefile](Makefile)).
+
+Próximos pasos sugeridos
+-----------------------
+
+1. Completar la implementación de `GestorArchivos` (templates y tests de E/S).
+2. Implementar la lógica completa de `operacionesTransacciones` (registro, cancelación y reportes).
+3. Poblar `datos/` con ejemplos y crear scripts de prueba.
+4. Añadir tests unitarios y casos de prueba para validaciones y persistencia.
+
+Contacto y soporte
+------------------
+
+Si quieres, puedo:
+
+- ejecutar una compilación en tu entorno (ya probé compilación localmente y se produjo un ejecutable `inventario.exe`),
+- abrir un PR con pruebas iniciales o
+- seguir implementando módulos pendientes.
+
+---
+
+Archivo actualizado para reflejar los cambios de Fase 2 → Fase 3. Revisa el contenido y dime si quieres que lo adapte (más detalle técnico, diagramas, o secciones de ejemplo). 
+
 Sistema integral de gestión para tiendas desarrollado en C++ que permite administrar:
 - Productos
 - Proveedores
@@ -249,72 +363,3 @@ Las relaciones 1:N se implementan mediante arrays fijos de IDs:
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Diagrama de Clases (Estructuras)</strong></div></h1> 
 
 <img src= "https://media.discordapp.net/attachments/1137458996404572283/1484361119463243796/image.png?ex=69bdf284&is=69bca104&hm=62c293a4e2aad861e5cad3e08ae8f74eeb3ab6b71f52c10652cb938659228db1&=&format=webp&quality=lossless&width=406&height=623" width="250">
-
-<div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Manual de Usuario Rápido</strong></div></h1> 
-
-#### ==========================================================
-###   SISTEMA DE INVENTARIO | NOMBRE_TIENDA | RIF: J-XXXXXXXX-X
-#### ==========================================================
-1. Gestión de Productos
-2. Gestión de Proveedores
-3. Gestión de Clientes
-4. Gestión de Transacciones
-5. Reportes y Mantenimiento
-6. Configurar Tienda
-0. Salir
-#### ==========================================================
-Opcion: 
-
-### Gestión de Productos
-- **Crear producto**: Ingresar código único, nombre, descripción, proveedor, precio, stock y stock mínimo. Valida existencia del proveedor antes de crear.
-- **Listar productos**: Muestra todos los productos con información del proveedor (nombre, RIF, teléfono) en formato tabular.
-- **Buscar producto**: Por ID (detalle completo) o por nombre (coincidencia parcial insensible a mayúsculas).
-- **Actualizar producto**: Modificar campos individualmente (código, nombre, descripción, proveedor, precio, stock, stock mínimo).
-- **Ajustar stock**: Sumar o restar cantidad sin sobrescribir el valor actual.
-- **Eliminar producto**: Borrado lógico con flag `eliminado` y confirmación del usuario.
-
-### Gestión de Proveedores
-- **Registrar proveedor**: Validación de formato RIF (J-12345678-9) y unicidad de identificación.
-- **Listar proveedores**: Muestra todos los proveedores con la cantidad de productos asociados a cada uno.
-- **Buscar proveedor**: Por ID o por nombre (coincidencia parcial).
-- **Actualizar proveedor**: Modificar nombre, dirección, teléfono, email o RIF.
-- **Eliminar proveedor**: Verificación de productos asociados antes de permitir la eliminación (borrado lógico).
-
-### Gestión de Clientes
-- **Registrar cliente**: Validación de formato de cédula (V-12345678 o E-12345678) y unicidad de identificación.
-- **Listar clientes**: Muestra todos los clientes con el total gastado en sus compras.
-- **Buscar cliente**: Por ID o por nombre (coincidencia parcial).
-- **Actualizar cliente**: Modificar datos personales del cliente.
-- **Eliminar cliente**: Verificación de transacciones asociadas antes de permitir la eliminación (borrado lógico).
-- **Historial de compras**: Visualización de todas las transacciones realizadas por un cliente específico.
-
-### Gestión de Transacciones
-- **Registrar venta**:
-  - Selección de cliente existente
-  - Agregar hasta 10 productos por transacción
-  - Validación de stock disponible antes de procesar
-  - Precio configurable (usar precio del producto o ingresar otro)
-  - Actualización automática de stock y estadísticas del cliente
-- **Registrar compra**:
-  - Selección de proveedor existente
-  - Agregar múltiples productos con sus cantidades
-  - Precio de compra independiente del precio de venta
-  - Aumento automático de stock
-- **Cancelar transacción**:
-  - Anulación de venta o compra existente
-  - Reversión automática del efecto en stock
-  - Actualización de estadísticas del cliente/proveedor
-- **Listar transacciones**: Visualización formateada con información de la contraparte (cliente o proveedor)
-- **Buscar transacciones**: Por ID, tipo (compra/venta), fecha o entidad involucrada
-
-### Reportes y Mantenimiento
-- **Resumen general**: Estadísticas globales del sistema mostrando:
-  - Total de productos, proveedores, clientes y transacciones
-  - Valor total del inventario
-  - Total de ventas y compras realizadas
-- **Stock crítico**: Listado de productos con stock ≤ stock mínimo, alertando sobre necesidad de reabastecimiento
-- **Integridad referencial**: Verificación automática de relaciones entre archivos:
-  - Productos huerfanos (sin proveedor válido)
-  - Transacciones con clientes o proveedores inexistentes
-  - Transacciones con productos no registrados
-- **Backup**: Creación de copia de seguridad de todos los archivos .bin con timestamp en el nombre
