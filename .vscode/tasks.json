@@ -23,9 +23,29 @@
             ],
             "group": {
                 "kind": "build",
-                "isDefault": true
+                "isDefault": false
             },
             "detail": "Tarea generada por el depurador."
+        }
+        ,
+        {
+            "label": "Compilar proyecto (Makefile)",
+            "type": "shell",
+            "command": "make",
+            "args": ["all"],
+            "problemMatcher": ["$gcc"],
+            "group": { "kind": "build", "isDefault": false },
+            "presentation": { "echo": true, "reveal": "always" }
+        }
+        ,
+        {
+            "label": "Compilar proyecto (g++)",
+            "type": "shell",
+            "command": "powershell",
+            "args": ["-NoProfile","-Command","g++ (Get-ChildItem -Recurse -Filter *.cpp | ForEach-Object { $_.FullName }) -Wall -Wextra -g3 -finput-charset=UTF-8 -fexec-charset=UTF-8 -o inventario.exe"],
+            "problemMatcher": ["$gcc"],
+            "group": { "kind": "build", "isDefault": true },
+            "presentation": { "echo": true, "reveal": "always" }
         }
     ],
     "version": "2.0.0"

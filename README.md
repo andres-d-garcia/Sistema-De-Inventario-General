@@ -1,3 +1,4 @@
+
 <img src="https://64.media.tumblr.com/2e317ca5b9fb13feebde242e45f24172/73f0c4d120734f31-c8/s2048x3072/1fc0b91846abd27352cd497226c3aa07b6bd6a88.pnj">
 
 <div><h1><img src= "https://64.media.tumblr.com/40936113bcf631fdeeda308c7afc3642/d5b3859a68122916-75/s100x200/aa3229ee2858071816fb6b5d6673cb31065385cf.gifv" width="50"><strong>Descripción del Proyecto</strong></div></h1>
@@ -58,28 +59,61 @@ Implementar plantillas permite reutilizar la lógica para `Producto`, `Proveedor
 Compilación y ejecución
 -----------------------
 
-Makefile
-- Usar `make` en entornos Unix/MSYS. En Windows con MinGW/TDM use `mingw32-make` si `make` no está disponible.
+# Sistema de Inventario - Distribución y build
 
-Compilación directa (ejemplo con TDM/MinGW):
+Resumen breve
+- Ejecutable recomendado: `inventario.exe` (ya generado en este repositorio).
+- Carpeta de datos: `datos/` — contiene los archivos binarios usados por el programa.
 
-```bash
-g++ -std=c++11 -Wall -Wextra -g \
-  main.cpp persistencia/GestorArchivos.cpp tienda/Tienda.cpp \
-  productos/Producto.cpp productos/operacionesProductos.cpp \
-  proveedores/Proveedor.cpp proveedores/operacionesProveedores.cpp \
-  clientes/Cliente.cpp clientes/operacionesClientes.cpp \
-  transacciones/Transaccion.cpp transacciones/operacionesTransacciones.cpp \
-  interfaz/Interfaz.cpp utilidades/Validaciones.cpp utilidades/Formatos.cpp \
-  -o inventario.exe
+Ejecución (Windows)
+- Copia `inventario.exe` y la carpeta `datos/` a la máquina destino.
+- Si usaste MinGW, puede que necesites incluir las DLLs: `libstdc++-6.dll`, `libgcc_s_seh-1.dll`, `libwinpthread-1.dll`.
+- Ejecuta desde PowerShell o CMD:
+
+```
+./inventario.exe
 ```
 
-Ejecución
-- En Windows: `inventario.exe`
-- En Unix/macOS: `./inventario`
+Distribución portátil recomendada
+- Crear un ZIP que contenga:
+  - `inventario.exe`
+  - Las DLLs necesarias (si aplican)
+  - Carpeta `datos/` (vacía o con archivos iniciales)
+  - Este `README.md` con instrucciones
 
-Notas sobre el entorno Windows
-- Si usas TDM o MinGW, asegúrate de tener `g++` en el `PATH`. Si no hay `make`, usa `mingw32-make` o compila con el comando `g++` anterior.
+Compilar desde el código
+- Requisitos: MinGW/GCC o similar (Windows) o GCC en Linux/macOS.
+- Opciones:
+  - Usar el Makefile (si tienes `make`):
+
+    ```
+    make all
+    ```
+
+  - Compilar manualmente (PowerShell example):
+
+    ```powershell
+    g++ (Get-ChildItem -Recurse -Filter *.cpp | ForEach-Object { $_.FullName }) -Wall -Wextra -g3 -finput-charset=UTF-8 -fexec-charset=UTF-8 -o inventario.exe
+    ```
+
+  - Desde VS Code: la tarea por defecto `Compilar proyecto (g++)` compila todo y genera `inventario.exe`.
+
+Estático vs Dinámico
+- Para evitar depender de DLLs, puedes intentar enlazar estáticamente (aumenta tamaño):
+
+```
+g++ ... -static -static-libgcc -static-libstdc++ -o inventario.exe
+```
+
+Advertencias y notas
+- Si compartes sólo el `.exe`, algunos usuarios pueden necesitar las DLLs o permisos de ejecución.
+- Si quieres que otros compilen, documenta la versión de GCC/MinGW recomendada.
+
+Contribuir
+- Pull requests y issues son bienvenidos. Para compilar localmente revisa `Makefile` y `.vscode/tasks.json`.
+
+Licencia
+- Incluye la licencia del proyecto si aplica (no incluida aquí por defecto).
 
 Estado actual del repositorio
 -----------------------------

@@ -11,7 +11,7 @@ public:
     Cliente(const char* nombre, const char* identificacion,
             const char* telefono, const char* email, const char* direccion);
     Cliente(const Cliente& otro);
-    ~Cliente();
+    ~Cliente(); // Destructor para liberar recursos si es necesario
 
     int         getId()             const;
     const char* getNombre()         const;
