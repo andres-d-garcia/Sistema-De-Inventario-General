@@ -4,14 +4,10 @@
 #include <ctime>
 #include "../persistencia/Constantes.hpp"
 
-// =============================================================================
-// ItemTransaccion - Un producto dentro de una transaccion
-// =============================================================================
 class ItemTransaccion {
 public:
     ItemTransaccion();
-    ItemTransaccion(int idProducto, int cantidad,
-                    float precioUnitario);
+    ItemTransaccion(int idProducto, int cantidad, float precioUnitario);
 
     int   getIdProducto()     const;
     int   getCantidad()       const;
@@ -28,12 +24,9 @@ private:
     int   idProducto;
     int   cantidad;
     float precioUnitario;
-    float subtotal;      
+    float subtotal;
 };
 
-// =============================================================================
-// Transaccion - Venta o Compra con multiples items
-// =============================================================================
 class Transaccion {
     friend class GestorArchivos;
 public:
@@ -57,7 +50,7 @@ public:
     const ItemTransaccion& getItem(int posicion) const;
 
     bool setId(int id);
-    bool setTipo(const char* tipo);          
+    bool setTipo(const char* tipo);
     bool setIdCliente(int id);
     bool setIdProveedor(int id);
     bool setDescripcion(const char* desc);
@@ -67,7 +60,7 @@ public:
     void actualizarFechaModificacion();
 
     bool agregarItem(const ItemTransaccion& item);
-    void recalcularTotal();                          
+    void recalcularTotal();
 
     bool esVenta()  const;
     bool esCompra() const;
